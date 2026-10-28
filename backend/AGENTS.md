@@ -6,6 +6,7 @@ FastAPI app managed with uv (Python 3.13). Runs inside the Docker container on p
 
 - `app/models.py` - Pydantic `BoardData` (mirrors the frontend type) with validation: fixed column ids in order, every card in exactly one column.
 - `app/db.py` - SQLite via `sqlite3` (see `docs/DATABASE.md`). `init_db()` runs at startup; `get_board(username)` creates the user and seeds `default_board.json` on first access; `save_board()` replaces the board. `DB_PATH` env var overrides the default `data/kanban.db`.
+- `app/ai.py` - OpenRouter client via the `openai` SDK (`base_url=https://openrouter.ai/api/v1`), model `openai/gpt-oss-120b`, key from `OPENROUTER_API_KEY`. `ask(prompt)` returns the reply text.
 - `app/main.py` - FastAPI app. API routes live under `/api/*` and must be registered before the static mount. `static/` is mounted at `/` (with `html=True`, so `/` serves `index.html`).
 - `static/` - files served at `/`. Not in git: the Dockerfile copies the Next.js static export (`frontend/out`) here. To run locally, copy `frontend/out` to `backend/static` after `npm run build`.
 - `tests/` - pytest with FastAPI `TestClient`. `conftest.py` points `db.DB_PATH` at a temp file per test and provides `client` and `auth_client` (signed in) fixtures.
@@ -27,4 +28,5 @@ uv sync
 uv run uvicorn app.main:app --reload --port 8001
 uv run pytest
 uv run pytest tests/test_main.py::test_health
+uv run --env-file ../.env pytest   # include tests that call the real AI (skipped without the key)
 ```

@@ -100,8 +100,8 @@ Success criteria: the app is a persistent Kanban board; all changes survive relo
 
 ## Part 8: AI connectivity
 
-- [ ] Add the `openai` SDK; a small `ai.py` client configured for OpenRouter using `OPENROUTER_API_KEY`
-- [ ] Temporary/debug route or test that asks "What is 2+2?" and returns the answer
+- [x] Add the `openai` SDK; a small `ai.py` client configured for OpenRouter using `OPENROUTER_API_KEY`
+- [x] Temporary/debug route or test that asks "What is 2+2?" and returns the answer
 
 Tests:
 - pytest (real API, skipped if no key): response contains "4"
