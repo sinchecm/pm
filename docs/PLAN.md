@@ -123,9 +123,9 @@ Success criteria: the AI can answer questions about the board and create/edit/mo
 
 ## Part 10: AI chat sidebar
 
-- [ ] Sidebar chat panel (toggleable) styled with the project color scheme: message list, input, send button (purple), loading indicator
-- [ ] Keep conversation history in component state and send it with each message
-- [ ] When the response includes a board, replace the board state so the UI refreshes immediately
+- [x] Sidebar chat panel (toggleable) styled with the project color scheme: message list, input, send button (purple), loading indicator
+- [x] Keep conversation history in component state and send it with each message
+- [x] When the response includes a board, replace the board state so the UI refreshes immediately
 
 Tests:
 - Vitest with mocked fetch: messages render; sending shows loading then reply; a returned board updates the displayed columns/cards

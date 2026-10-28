@@ -13,16 +13,17 @@ Next.js 16 (App Router), React 19, TypeScript, Tailwind v4, dnd-kit. Built as a 
   - `initialData` - the default board (same as `backend/app/default_board.json`); now only used by tests.
   - `moveCard(columns, activeId, overId)` - reorders within a column or moves across columns. Dropping on a column id appends; dropping on a card id inserts at that card's position.
   - `createId(prefix)` - random id generator for new cards.
-- `src/components/KanbanBoard.tsx` - takes `initialBoard` and `onLogout` (Log out button in the header); owns board state (`useState`). An effect saves every change with `PUT /api/board`, queued so saves reach the server in order. Owns the dnd-kit `DndContext` (PointerSensor, 6px activation distance, `closestCorners`). Handles drag end, column rename, add, edit and delete card.
+- `src/components/KanbanBoard.tsx` - takes `initialBoard` and `onLogout` (AI Assistant and Log out buttons in the header); owns board state (`useState`). An effect saves every change with `PUT /api/board`, queued so saves reach the server in order; `savedBoard` tracks what the server already has, so boards returned by the AI (already saved by `/api/chat`) are applied without a second save. When the chat is open the page gets right padding so the sidebar doesn't cover the board. Owns the dnd-kit `DndContext` (PointerSensor, 6px activation distance, `closestCorners`). Handles drag end, column rename, add, edit and delete card.
 - `src/components/KanbanColumn.tsx` - droppable column; title is an always-editable input (rename); renders cards in a `SortableContext` plus `NewCardForm`.
-- `src/components/KanbanCard.tsx` - sortable card showing title/details with Edit and Remove buttons. Edit switches to an inline form (drag attributes/listeners are not attached while editing).
+- `src/components/ChatSidebar.tsx` - fixed right-hand AI chat panel. Keeps the conversation in state, posts `{message, history}` to `/api/chat`, shows "Thinking..." while waiting, calls `onBoardUpdate` when the reply includes a board, and on error restores the message with an error line.
+- `src/components/KanbanCard.tsx` - sortable card showing title/details with Edit and Remove buttons in a row underneath. Edit switches to an inline form (drag attributes/listeners are not attached while editing).
 - `src/components/KanbanCardPreview.tsx` - static card used in the `DragOverlay`.
 - `src/components/NewCardForm.tsx` - toggleable form to add a card (title required, details optional, defaults to "No details yet.").
 
 ## Tests
 
-- Unit (Vitest + Testing Library, jsdom): `src/lib/kanban.test.ts` (moveCard), `src/components/KanbanBoard.test.tsx` (UI actions and the PUT saved for each), `src/app/page.test.tsx` (board loading and sign-in flow). Both stub `fetch` with `vi.stubGlobal`. Setup in `src/test/setup.ts`.
-- E2E (Playwright, Chromium): `tests/auth.spec.ts` (login, bad credentials, session on reload, logout), `tests/kanban.spec.ts` (load board, add, edit, rename, drag between columns), `tests/persistence.spec.ts` (all changes survive reload and re-login). `loginWithFreshBoard` in `tests/helpers.ts` resets the stored board first; tests run with one worker because they share the user's board. Tests need the API, so they run against a throwaway test container on `http://localhost:8002` started by `scripts/test-e2e.sh` (override with `BASE_URL`). Never point them at the real app on 8001: they reset the board.
+- Unit (Vitest + Testing Library, jsdom): `src/lib/kanban.test.ts` (moveCard), `src/components/KanbanBoard.test.tsx` (UI actions and the PUT saved for each), `src/components/ChatSidebar.test.tsx` (messages, loading, history, board updates, errors), `src/app/page.test.tsx` (board loading and sign-in flow). They stub `fetch` with `vi.stubGlobal`. Setup in `src/test/setup.ts`.
+- E2E (Playwright, Chromium): `tests/auth.spec.ts` (login, bad credentials, session on reload, logout), `tests/kanban.spec.ts` (load board, add, edit, rename, drag between columns), `tests/persistence.spec.ts` (all changes survive reload and re-login), `tests/chat.spec.ts` (real AI: creates a card that appears without reload; answers a question without changing the board). `loginWithFreshBoard` in `tests/helpers.ts` resets the stored board first; tests run with one worker because they share the user's board. Tests need the API, so they run against a throwaway test container on `http://localhost:8002` started by `scripts/test-e2e.sh` (override with `BASE_URL`). Never point them at the real app on 8001: they reset the board.
 
 ## Commands
 
@@ -39,4 +40,4 @@ npm run test:unit
 ## Conventions
 
 - Path alias `@/` -> `src/`.
-- Test selectors: `data-testid="column-<id>"`, `data-testid="card-<id>"`, plus aria labels ("Column title", "Card title", "Card details", "Edit <title>", "Delete <title>").
+- Test selectors: `data-testid="column-<id>"`, `data-testid="card-<id>"`, plus aria labels ("Column title", "Card title", "Card details", "Edit <title>", "Delete <title>", "Message"), `data-testid="chat-message-user|assistant"`.

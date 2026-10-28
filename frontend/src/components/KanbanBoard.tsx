@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import clsx from "clsx";
 import {
   DndContext,
   DragOverlay,
@@ -13,6 +14,7 @@ import {
 } from "@dnd-kit/core";
 import { KanbanColumn } from "@/components/KanbanColumn";
 import { KanbanCardPreview } from "@/components/KanbanCardPreview";
+import { ChatSidebar } from "@/components/ChatSidebar";
 import { createId, moveCard, type BoardData } from "@/lib/kanban";
 
 type KanbanBoardProps = {
@@ -30,15 +32,24 @@ const saveBoard = async (board: BoardData) => {
 
 export const KanbanBoard = ({ initialBoard, onLogout }: KanbanBoardProps) => {
   const [board, setBoard] = useState<BoardData>(initialBoard);
-  // Saves run one at a time so the server always ends up with the latest board
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  // The board last stored on the server; saves run one at a time so the latest board wins
+  const savedBoard = useRef(initialBoard);
   const saveQueue = useRef(Promise.resolve());
 
   useEffect(() => {
-    if (board === initialBoard) {
+    if (board === savedBoard.current) {
       return;
     }
+    savedBoard.current = board;
     saveQueue.current = saveQueue.current.then(() => saveBoard(board));
-  }, [board, initialBoard]);
+  }, [board]);
+
+  // The chat endpoint has already saved boards it returns
+  const handleAIBoardUpdate = (nextBoard: BoardData) => {
+    savedBoard.current = nextBoard;
+    setBoard(nextBoard);
+  };
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
 
   const sensors = useSensors(
@@ -124,7 +135,12 @@ export const KanbanBoard = ({ initialBoard, onLogout }: KanbanBoardProps) => {
   const activeCard = activeCardId ? cardsById[activeCardId] : null;
 
   return (
-    <div className="relative overflow-hidden">
+    <div
+      className={clsx(
+        "relative overflow-hidden",
+        isChatOpen && "sm:pr-[380px]",
+      )}
+    >
       <div className="pointer-events-none absolute left-0 top-0 h-[420px] w-[420px] -translate-x-1/3 -translate-y-1/3 rounded-full bg-[radial-gradient(circle,_rgba(32,157,215,0.25)_0%,_rgba(32,157,215,0.05)_55%,_transparent_70%)]" />
       <div className="pointer-events-none absolute bottom-0 right-0 h-[520px] w-[520px] translate-x-1/4 translate-y-1/4 rounded-full bg-[radial-gradient(circle,_rgba(117,57,145,0.18)_0%,_rgba(117,57,145,0.05)_55%,_transparent_75%)]" />
 
@@ -145,13 +161,22 @@ export const KanbanBoard = ({ initialBoard, onLogout }: KanbanBoardProps) => {
               </p>
             </div>
             <div className="flex flex-col items-end gap-3">
-              <button
-                type="button"
-                onClick={onLogout}
-                className="rounded-full border border-[var(--stroke)] px-4 py-2 text-xs font-semibold uppercase tracking-wide text-[var(--navy-dark)] transition hover:border-[var(--primary-blue)]"
-              >
-                Log out
-              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsChatOpen(true)}
+                  className="rounded-full bg-[var(--secondary-purple)] px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white transition hover:brightness-110"
+                >
+                  AI Assistant
+                </button>
+                <button
+                  type="button"
+                  onClick={onLogout}
+                  className="rounded-full border border-[var(--stroke)] px-4 py-2 text-xs font-semibold uppercase tracking-wide text-[var(--navy-dark)] transition hover:border-[var(--primary-blue)]"
+                >
+                  Log out
+                </button>
+              </div>
               <div className="rounded-2xl border border-[var(--stroke)] bg-[var(--surface)] px-5 py-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[var(--gray-text)]">
                   Focus
@@ -205,6 +230,12 @@ export const KanbanBoard = ({ initialBoard, onLogout }: KanbanBoardProps) => {
           </DragOverlay>
         </DndContext>
       </main>
+      {isChatOpen && (
+        <ChatSidebar
+          onClose={() => setIsChatOpen(false)}
+          onBoardUpdate={handleAIBoardUpdate}
+        />
+      )}
     </div>
   );
 };

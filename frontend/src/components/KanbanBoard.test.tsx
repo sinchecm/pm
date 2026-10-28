@@ -167,4 +167,35 @@ describe("KanbanBoard", () => {
       expect(saved.columns[0].cardIds).toEqual(["card-2"]);
     });
   });
+
+  it("opens the AI assistant and applies a board returned by the AI without re-saving it", async () => {
+    const aiBoard: BoardData = {
+      ...initialData,
+      cards: {
+        ...initialData.cards,
+        "card-ai-1": { id: "card-ai-1", title: "From the AI", details: "Added by chat" },
+      },
+      columns: initialData.columns.map((column) =>
+        column.id === "col-review"
+          ? { ...column, cardIds: [...column.cardIds, "card-ai-1"] }
+          : column
+      ),
+    };
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ reply: "Added it.", board: aiBoard }))
+    );
+    renderBoard();
+
+    await userEvent.click(screen.getByRole("button", { name: /ai assistant/i }));
+    await userEvent.type(screen.getByLabelText("Message"), "Add a card");
+    await userEvent.click(screen.getByRole("button", { name: /send/i }));
+
+    const review = await screen.findByTestId("column-col-review");
+    expect(await within(review).findByText("From the AI")).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect((fetchMock.mock.calls[0] as unknown as [string])[0]).toBe("/api/chat");
+
+    await userEvent.click(screen.getByRole("button", { name: /close ai assistant/i }));
+    expect(screen.queryByLabelText("Message")).not.toBeInTheDocument();
+  });
 });
