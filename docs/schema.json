@@ -1,0 +1,40 @@
+{
+  "database": "SQLite",
+  "tables": {
+    "users": {
+      "columns": {
+        "id": "INTEGER PRIMARY KEY",
+        "username": "TEXT NOT NULL UNIQUE",
+        "created_at": "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP"
+      }
+    },
+    "boards": {
+      "columns": {
+        "id": "INTEGER PRIMARY KEY",
+        "user_id": "INTEGER NOT NULL UNIQUE REFERENCES users(id)",
+        "data": "TEXT NOT NULL",
+        "updated_at": "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP"
+      },
+      "notes": "UNIQUE user_id enforces one board per user for the MVP. data holds the board JSON below."
+    }
+  },
+  "board_data": {
+    "description": "Same shape as BoardData in frontend/src/lib/kanban.ts",
+    "example": {
+      "columns": [
+        { "id": "col-backlog", "title": "Backlog", "cardIds": ["card-1"] },
+        { "id": "col-discovery", "title": "Discovery", "cardIds": [] },
+        { "id": "col-progress", "title": "In Progress", "cardIds": [] },
+        { "id": "col-review", "title": "Review", "cardIds": [] },
+        { "id": "col-done", "title": "Done", "cardIds": [] }
+      ],
+      "cards": {
+        "card-1": {
+          "id": "card-1",
+          "title": "Align roadmap themes",
+          "details": "Draft quarterly themes with impact statements and metrics."
+        }
+      }
+    }
+  }
+}

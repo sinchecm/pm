@@ -65,9 +65,9 @@ Success criteria: the board is only reachable after logging in with `user`/`pass
 
 ## Part 5: Database modeling
 
-- [ ] Propose a schema and save it as `docs/schema.json`. Proposal: `users` (id, username unique, created_at) and `boards` (id, user_id unique FK, data JSON, updated_at), where `data` is the `BoardData` JSON the frontend already uses. Storing the board as one JSON document keeps reads/writes and AI updates to a single whole-board replace; normalized `columns`/`cards` tables are the alternative if per-card queries become necessary.
-- [ ] Document the approach in `docs/DATABASE.md` (schema, why JSON, how the db is created and seeded with the default board for a new user)
-- [ ] User sign-off
+- [x] Propose a schema and save it as `docs/schema.json`. Proposal: `users` (id, username unique, created_at) and `boards` (id, user_id unique FK, data JSON, updated_at), where `data` is the `BoardData` JSON the frontend already uses. Storing the board as one JSON document keeps reads/writes and AI updates to a single whole-board replace; normalized `columns`/`cards` tables are the alternative if per-card queries become necessary.
+- [x] Document the approach in `docs/DATABASE.md` (schema, why JSON, how the db is created and seeded with the default board for a new user)
+- [x] User sign-off
 
 Success criteria: user has approved the schema.
 
