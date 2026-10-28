@@ -4,10 +4,10 @@ from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 from starlette.middleware.sessions import SessionMiddleware
 
-from app import db
+from app import ai, db
 from app.models import BoardData
 
 STATIC_DIR = Path(__file__).parent.parent / "static"
@@ -31,6 +31,16 @@ app.add_middleware(SessionMiddleware, secret_key=secrets.token_hex(32))
 class Credentials(BaseModel):
     username: str
     password: str
+
+
+class ChatRequest(BaseModel):
+    message: str
+    history: list[ai.Message] = []
+
+
+class ChatResponse(BaseModel):
+    reply: str
+    board: BoardData | None
 
 
 def current_user(request: Request) -> str:
@@ -73,6 +83,20 @@ def read_board(username: str = Depends(current_user)) -> BoardData:
 def update_board(board: BoardData, username: str = Depends(current_user)) -> BoardData:
     db.save_board(username, board)
     return board
+
+
+@app.post("/api/chat")
+def chat(request: ChatRequest, username: str = Depends(current_user)) -> ChatResponse:
+    board = db.get_board(username)
+    result = ai.complete(ai.build_messages(board, request.history, request.message))
+    if result.board is None:
+        return ChatResponse(reply=result.reply, board=None)
+    try:
+        new_board = ai.from_ai_board(result.board)
+    except ValidationError:
+        raise HTTPException(status_code=502, detail="The AI returned an invalid board")
+    db.save_board(username, new_board)
+    return ChatResponse(reply=result.reply, board=new_board)
 
 
 app.mount("/", StaticFiles(directory=STATIC_DIR, html=True, check_dir=False), name="static")

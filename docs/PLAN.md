@@ -110,10 +110,10 @@ Success criteria: the container can reach OpenRouter and get a correct answer fr
 
 ## Part 9: AI with board context and Structured Outputs
 
-- [ ] `POST /api/chat` taking `{ message, history }`
-- [ ] Build the prompt: system instructions, the current board JSON, conversation history, user message
-- [ ] Structured Output schema: `{ reply: string, board: BoardData | null }`. When `board` is present, validate it and save it as the new board
-- [ ] Return `{ reply, board }` to the client
+- [x] `POST /api/chat` taking `{ message, history }`
+- [x] Build the prompt: system instructions, the current board JSON, conversation history, user message
+- [x] Structured Output schema: `{ reply: string, board: BoardData | null }`. When `board` is present, validate it and save it as the new board
+- [x] Return `{ reply, board }` to the client
 
 Tests:
 - pytest with the AI client mocked: reply-only response leaves board unchanged; response with a board saves it; invalid board from the model is rejected without corrupting stored data; 401 without session
