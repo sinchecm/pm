@@ -8,11 +8,19 @@ type Message = {
 };
 
 type ChatSidebarProps = {
+  isOpen: boolean;
   onClose: () => void;
   onBoardUpdate: (board: BoardData) => void;
+  onPendingChange: (isPending: boolean) => void;
 };
 
-export const ChatSidebar = ({ onClose, onBoardUpdate }: ChatSidebarProps) => {
+// Stays mounted while closed so the conversation is kept
+export const ChatSidebar = ({
+  isOpen,
+  onClose,
+  onBoardUpdate,
+  onPendingChange,
+}: ChatSidebarProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isSending, setIsSending] = useState(false);
@@ -36,33 +44,39 @@ export const ChatSidebar = ({ onClose, onBoardUpdate }: ChatSidebarProps) => {
     setError("");
     setMessages((prev) => [...prev, { role: "user", content: message }]);
     setIsSending(true);
+    onPendingChange(true);
 
-    const response = await fetch("/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message, history: messages }),
-    });
-    setIsSending(false);
-
-    if (!response.ok) {
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message, history: messages }),
+      });
+      if (!response.ok) {
+        throw new Error(`Chat request failed: ${response.status}`);
+      }
+      const data: { reply: string; board: BoardData | null } =
+        await response.json();
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: data.reply },
+      ]);
+      if (data.board) {
+        onBoardUpdate(data.board);
+      }
+    } catch {
       setMessages((prev) => prev.slice(0, -1));
       setInput(message);
       setError("Something went wrong. Please try again.");
-      return;
-    }
-    const data: { reply: string; board: BoardData | null } =
-      await response.json();
-    setMessages((prev) => [
-      ...prev,
-      { role: "assistant", content: data.reply },
-    ]);
-    if (data.board) {
-      onBoardUpdate(data.board);
+    } finally {
+      setIsSending(false);
+      onPendingChange(false);
     }
   };
 
   return (
     <aside
+      hidden={!isOpen}
       className="fixed inset-y-0 right-0 z-20 flex w-full flex-col border-l border-[var(--stroke)] bg-white shadow-[var(--shadow)] sm:w-[380px]"
       aria-label="AI assistant"
     >

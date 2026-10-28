@@ -1,6 +1,9 @@
 import json
 import os
+from typing import ClassVar
 
+import openai
+import pydantic
 import pytest
 
 from app import ai, db
@@ -19,7 +22,7 @@ def fake_ai(monkeypatch):
 
     class FakeAI:
         response = ai.AIResponse(reply="Hello", board=None)
-        messages: list[dict] = []
+        messages: ClassVar[list[dict]] = []
 
     def complete(messages):
         FakeAI.messages = messages
@@ -87,6 +90,28 @@ def test_duplicate_card_from_ai_is_rejected(auth_client, fake_ai):
 
     assert auth_client.post("/api/chat", json={"message": "Copy"}).status_code == 502
     assert auth_client.get("/api/board").json() == DEFAULT
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        openai.OpenAIError("Request timed out"),
+        pydantic.ValidationError.from_exception_data("AIResponse", []),
+    ],
+)
+def test_ai_failure_returns_502(auth_client, monkeypatch, error):
+    def complete(messages):
+        raise error
+
+    monkeypatch.setattr(ai, "complete", complete)
+    response = auth_client.post("/api/chat", json={"message": "hi"})
+    assert response.status_code == 502
+    assert auth_client.get("/api/board").json() == DEFAULT
+
+
+def test_ai_refusal_returns_502(auth_client, monkeypatch):
+    monkeypatch.setattr(ai, "complete", lambda messages: None)
+    assert auth_client.post("/api/chat", json={"message": "hi"}).status_code == 502
 
 
 def test_board_conversion_round_trips():

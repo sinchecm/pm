@@ -32,7 +32,7 @@ IMPORTANT: the app on port 8001 holds the user's real board. Never run e2e tests
 
 ## Frontend architecture
 
-- `src/lib/kanban.ts` holds the data model and pure logic: `BoardData` is normalized as `columns` (each with ordered `cardIds`) plus a `cards` record keyed by id. `moveCard` handles reorder within a column and moves across columns (dropping on a column id appends; dropping on a card id inserts at that card's index). `initialData` seeds the five fixed columns.
+- `src/lib/kanban.ts` holds the data model and pure logic: `BoardData` is normalized as `columns` (each with ordered `cardIds`) plus a `cards` record keyed by id. `moveCard` handles reorder within a column and moves across columns (dropping on a column id appends; dropping on a card id inserts at that card's index). `initialData` mirrors `backend/app/default_board.json` and is only used by tests (the server seeds new boards).
 - `src/components/KanbanBoard.tsx` owns all board state (`useState`) and the dnd-kit `DndContext`; it passes rename/add/edit/delete handlers down to `KanbanColumn` -> `KanbanCard`, and renders `ChatSidebar`, applying boards the AI returns without re-saving them. `KanbanCardPreview` renders the `DragOverlay`.
 - The `BoardData` shape is the JSON contract for `/api/board`. The AI uses a nested variant (columns containing cards) converted in `backend/app/ai.py`.
 - Path alias `@/` maps to `src/`. Styling is Tailwind v4.

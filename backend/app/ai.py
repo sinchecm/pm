@@ -47,7 +47,12 @@ class AIResponse(BaseModel):
 
 
 def get_client() -> OpenAI:
-    return OpenAI(base_url="https://openrouter.ai/api/v1", api_key=os.environ["OPENROUTER_API_KEY"])
+    return OpenAI(
+        base_url="https://openrouter.ai/api/v1",
+        api_key=os.environ["OPENROUTER_API_KEY"],
+        timeout=60,
+        max_retries=1,
+    )
 
 
 def ask(prompt: str) -> str:
@@ -97,7 +102,8 @@ def build_messages(board: BoardData, history: list[Message], message: str) -> li
     ]
 
 
-def complete(messages: list[dict]) -> AIResponse:
+def complete(messages: list[dict]) -> AIResponse | None:
+    """Returns None if the model refused. Raises OpenAIError or ValidationError on failure."""
     response = get_client().chat.completions.parse(
         model=MODEL,
         messages=messages,

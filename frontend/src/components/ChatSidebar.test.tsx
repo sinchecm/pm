@@ -17,8 +17,19 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-const renderSidebar = (onBoardUpdate = vi.fn(), onClose = vi.fn()) =>
-  render(<ChatSidebar onBoardUpdate={onBoardUpdate} onClose={onClose} />);
+const renderSidebar = (
+  onBoardUpdate = vi.fn(),
+  onClose = vi.fn(),
+  onPendingChange = vi.fn(),
+) =>
+  render(
+    <ChatSidebar
+      isOpen
+      onBoardUpdate={onBoardUpdate}
+      onClose={onClose}
+      onPendingChange={onPendingChange}
+    />,
+  );
 
 const send = async (text: string) => {
   await userEvent.type(screen.getByLabelText("Message"), text);
@@ -31,25 +42,33 @@ const sentBody = (callIndex: number) =>
 describe("ChatSidebar", () => {
   it("shows the user message, a loading state, then the reply", async () => {
     let respond: (response: Response) => void = () => {};
-    fetchMock.mockReturnValue(new Promise<Response>((resolve) => (respond = resolve)));
+    fetchMock.mockReturnValue(
+      new Promise<Response>((resolve) => (respond = resolve)),
+    );
     renderSidebar();
 
     await send("How many cards?");
-    expect(screen.getByTestId("chat-message-user")).toHaveTextContent("How many cards?");
+    expect(screen.getByTestId("chat-message-user")).toHaveTextContent(
+      "How many cards?",
+    );
     expect(screen.getByText("Thinking...")).toBeInTheDocument();
     expect(screen.getByLabelText("Message")).toHaveValue("");
 
     respond(jsonResponse(200, { reply: "There are 8 cards.", board: null }));
-    expect(await screen.findByTestId("chat-message-assistant")).toHaveTextContent(
-      "There are 8 cards."
-    );
+    expect(
+      await screen.findByTestId("chat-message-assistant"),
+    ).toHaveTextContent("There are 8 cards.");
     expect(screen.queryByText("Thinking...")).not.toBeInTheDocument();
   });
 
   it("sends the conversation history with each message", async () => {
     fetchMock
-      .mockResolvedValueOnce(jsonResponse(200, { reply: "First reply", board: null }))
-      .mockResolvedValueOnce(jsonResponse(200, { reply: "Second reply", board: null }));
+      .mockResolvedValueOnce(
+        jsonResponse(200, { reply: "First reply", board: null }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse(200, { reply: "Second reply", board: null }),
+      );
     renderSidebar();
 
     await send("First");
@@ -69,7 +88,9 @@ describe("ChatSidebar", () => {
   });
 
   it("passes a returned board to onBoardUpdate", async () => {
-    fetchMock.mockResolvedValue(jsonResponse(200, { reply: "Updated", board: initialData }));
+    fetchMock.mockResolvedValue(
+      jsonResponse(200, { reply: "Updated", board: initialData }),
+    );
     const onBoardUpdate = vi.fn();
     renderSidebar(onBoardUpdate);
 
@@ -79,7 +100,9 @@ describe("ChatSidebar", () => {
   });
 
   it("does not call onBoardUpdate for reply-only responses", async () => {
-    fetchMock.mockResolvedValue(jsonResponse(200, { reply: "Just text", board: null }));
+    fetchMock.mockResolvedValue(
+      jsonResponse(200, { reply: "Just text", board: null }),
+    );
     const onBoardUpdate = vi.fn();
     renderSidebar(onBoardUpdate);
 
@@ -94,10 +117,37 @@ describe("ChatSidebar", () => {
 
     await send("Break things");
     expect(
-      await screen.findByText("Something went wrong. Please try again.")
+      await screen.findByText("Something went wrong. Please try again."),
     ).toBeInTheDocument();
     expect(screen.getByLabelText("Message")).toHaveValue("Break things");
     expect(screen.queryByTestId("chat-message-user")).not.toBeInTheDocument();
+  });
+
+  it("recovers from a network error", async () => {
+    fetchMock.mockRejectedValue(new TypeError("Failed to fetch"));
+    const onPendingChange = vi.fn();
+    renderSidebar(vi.fn(), vi.fn(), onPendingChange);
+
+    await send("Hello");
+    expect(
+      await screen.findByText("Something went wrong. Please try again."),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Message")).toHaveValue("Hello");
+    expect(screen.queryByText("Thinking...")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /send/i })).toBeEnabled();
+    expect(onPendingChange.mock.calls).toEqual([[true], [false]]);
+  });
+
+  it("reports pending state around a request", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse(200, { reply: "Hi", board: null }),
+    );
+    const onPendingChange = vi.fn();
+    renderSidebar(vi.fn(), vi.fn(), onPendingChange);
+
+    await send("Hello");
+    await screen.findByText("Hi");
+    expect(onPendingChange.mock.calls).toEqual([[true], [false]]);
   });
 
   it("ignores empty messages", async () => {
@@ -109,7 +159,9 @@ describe("ChatSidebar", () => {
   it("calls onClose", async () => {
     const onClose = vi.fn();
     renderSidebar(vi.fn(), onClose);
-    await userEvent.click(screen.getByRole("button", { name: /close ai assistant/i }));
+    await userEvent.click(
+      screen.getByRole("button", { name: /close ai assistant/i }),
+    );
     expect(onClose).toHaveBeenCalledOnce();
   });
 });

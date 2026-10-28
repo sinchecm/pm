@@ -4,6 +4,7 @@ from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
+from openai import OpenAIError
 from pydantic import BaseModel, ValidationError
 from starlette.middleware.sessions import SessionMiddleware
 
@@ -88,7 +89,12 @@ def update_board(board: BoardData, username: str = Depends(current_user)) -> Boa
 @app.post("/api/chat")
 def chat(request: ChatRequest, username: str = Depends(current_user)) -> ChatResponse:
     board = db.get_board(username)
-    result = ai.complete(ai.build_messages(board, request.history, request.message))
+    try:
+        result = ai.complete(ai.build_messages(board, request.history, request.message))
+    except (OpenAIError, ValidationError):
+        raise HTTPException(status_code=502, detail="The AI service failed, please try again")
+    if result is None:
+        raise HTTPException(status_code=502, detail="The AI did not return an answer")
     if result.board is None:
         return ChatResponse(reply=result.reply, board=None)
     try:

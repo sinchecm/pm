@@ -14,8 +14,22 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-const renderBoard = (onLogout = vi.fn()) =>
-  render(<KanbanBoard initialBoard={initialData} onLogout={onLogout} />);
+const renderBoard = (onLogout = vi.fn(), onSessionExpired = vi.fn()) =>
+  render(
+    <KanbanBoard
+      initialBoard={initialData}
+      onLogout={onLogout}
+      onSessionExpired={onSessionExpired}
+    />,
+  );
+
+// Appends to the first column title: one keystroke, one save
+const typeInFirstColumnTitle = async (text: string) => {
+  await userEvent.type(
+    within(getFirstColumn()).getByLabelText("Column title"),
+    text,
+  );
+};
 
 const lastSavedBoard = (): BoardData => {
   const calls = fetchMock.mock.calls as unknown as [string, RequestInit][];
@@ -55,7 +69,9 @@ describe("KanbanBoard", () => {
     const detailsInput = within(column).getByPlaceholderText(/details/i);
     await userEvent.type(detailsInput, "Notes");
 
-    await userEvent.click(within(column).getByRole("button", { name: /add card/i }));
+    await userEvent.click(
+      within(column).getByRole("button", { name: /add card/i }),
+    );
 
     expect(within(column).getByText("New card")).toBeInTheDocument();
 
@@ -71,7 +87,7 @@ describe("KanbanBoard", () => {
     renderBoard();
     const card = screen.getByTestId("card-card-1");
     await userEvent.click(
-      within(card).getByRole("button", { name: /edit align roadmap themes/i })
+      within(card).getByRole("button", { name: /edit align roadmap themes/i }),
     );
 
     const titleInput = within(card).getByLabelText("Card title");
@@ -91,13 +107,15 @@ describe("KanbanBoard", () => {
     renderBoard();
     const card = screen.getByTestId("card-card-1");
     await userEvent.click(
-      within(card).getByRole("button", { name: /edit align roadmap themes/i })
+      within(card).getByRole("button", { name: /edit align roadmap themes/i }),
     );
 
     const titleInput = within(card).getByLabelText("Card title");
     await userEvent.clear(titleInput);
     await userEvent.type(titleInput, "Discarded");
-    await userEvent.click(within(card).getByRole("button", { name: /cancel/i }));
+    await userEvent.click(
+      within(card).getByRole("button", { name: /cancel/i }),
+    );
 
     expect(within(card).getByText("Align roadmap themes")).toBeInTheDocument();
     expect(within(card).queryByText("Discarded")).not.toBeInTheDocument();
@@ -106,8 +124,12 @@ describe("KanbanBoard", () => {
   it("does not add a card without a title", async () => {
     renderBoard();
     const column = getFirstColumn();
-    await userEvent.click(within(column).getByRole("button", { name: /add a card/i }));
-    await userEvent.click(within(column).getByRole("button", { name: /add card/i }));
+    await userEvent.click(
+      within(column).getByRole("button", { name: /add a card/i }),
+    );
+    await userEvent.click(
+      within(column).getByRole("button", { name: /add card/i }),
+    );
     expect(within(column).getAllByTestId(/^card-/)).toHaveLength(2);
   });
 
@@ -128,15 +150,24 @@ describe("KanbanBoard", () => {
     const input = within(getFirstColumn()).getByLabelText("Column title");
     await userEvent.clear(input);
     await userEvent.type(input, "Ideas");
-    await vi.waitFor(() => expect(lastSavedBoard().columns[0].title).toBe("Ideas"));
+    await vi.waitFor(() =>
+      expect(lastSavedBoard().columns[0].title).toBe("Ideas"),
+    );
   });
 
   it("saves an added card", async () => {
     renderBoard();
     const column = getFirstColumn();
-    await userEvent.click(within(column).getByRole("button", { name: /add a card/i }));
-    await userEvent.type(within(column).getByPlaceholderText(/card title/i), "Saved card");
-    await userEvent.click(within(column).getByRole("button", { name: /add card/i }));
+    await userEvent.click(
+      within(column).getByRole("button", { name: /add a card/i }),
+    );
+    await userEvent.type(
+      within(column).getByPlaceholderText(/card title/i),
+      "Saved card",
+    );
+    await userEvent.click(
+      within(column).getByRole("button", { name: /add card/i }),
+    );
 
     await vi.waitFor(() => {
       const saved = lastSavedBoard();
@@ -154,12 +185,16 @@ describe("KanbanBoard", () => {
     await userEvent.type(titleInput, "Edited");
     await userEvent.click(within(card).getByRole("button", { name: /save/i }));
 
-    await vi.waitFor(() => expect(lastSavedBoard().cards["card-1"].title).toBe("Edited"));
+    await vi.waitFor(() =>
+      expect(lastSavedBoard().cards["card-1"].title).toBe("Edited"),
+    );
   });
 
   it("saves a removed card", async () => {
     renderBoard();
-    await userEvent.click(screen.getByRole("button", { name: /delete align roadmap themes/i }));
+    await userEvent.click(
+      screen.getByRole("button", { name: /delete align roadmap themes/i }),
+    );
 
     await vi.waitFor(() => {
       const saved = lastSavedBoard();
@@ -173,29 +208,121 @@ describe("KanbanBoard", () => {
       ...initialData,
       cards: {
         ...initialData.cards,
-        "card-ai-1": { id: "card-ai-1", title: "From the AI", details: "Added by chat" },
+        "card-ai-1": {
+          id: "card-ai-1",
+          title: "From the AI",
+          details: "Added by chat",
+        },
       },
       columns: initialData.columns.map((column) =>
         column.id === "col-review"
           ? { ...column, cardIds: [...column.cardIds, "card-ai-1"] }
-          : column
+          : column,
       ),
     };
     fetchMock.mockResolvedValueOnce(
-      new Response(JSON.stringify({ reply: "Added it.", board: aiBoard }))
+      new Response(JSON.stringify({ reply: "Added it.", board: aiBoard })),
     );
     renderBoard();
 
-    await userEvent.click(screen.getByRole("button", { name: /ai assistant/i }));
+    await userEvent.click(
+      screen.getByRole("button", { name: /ai assistant/i }),
+    );
     await userEvent.type(screen.getByLabelText("Message"), "Add a card");
     await userEvent.click(screen.getByRole("button", { name: /send/i }));
 
     const review = await screen.findByTestId("column-col-review");
     expect(await within(review).findByText("From the AI")).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect((fetchMock.mock.calls[0] as unknown as [string])[0]).toBe("/api/chat");
+    expect((fetchMock.mock.calls[0] as unknown as [string])[0]).toBe(
+      "/api/chat",
+    );
 
-    await userEvent.click(screen.getByRole("button", { name: /close ai assistant/i }));
-    expect(screen.queryByLabelText("Message")).not.toBeInTheDocument();
+    await userEvent.click(
+      screen.getByRole("button", { name: /close ai assistant/i }),
+    );
+    expect(screen.getByLabelText("Message")).not.toBeVisible();
+  });
+
+  it("keeps the conversation when the assistant is closed and reopened", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ reply: "Hello there", board: null })),
+    );
+    renderBoard();
+    await userEvent.click(screen.getByRole("button", { name: "AI Assistant" }));
+    await userEvent.type(screen.getByLabelText("Message"), "Hi");
+    await userEvent.click(screen.getByRole("button", { name: /send/i }));
+    await screen.findByText("Hello there");
+
+    await userEvent.click(
+      screen.getByRole("button", { name: /close ai assistant/i }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "AI Assistant" }));
+    expect(screen.getByText("Hello there")).toBeVisible();
+  });
+
+  it("locks the board while the AI is working", async () => {
+    let respond: (response: Response) => void = () => {};
+    fetchMock.mockReturnValueOnce(
+      new Promise<Response>((resolve) => (respond = resolve)),
+    );
+    renderBoard();
+    const boardArea = screen.getByTestId("board-area");
+    expect(boardArea).not.toHaveAttribute("inert");
+
+    await userEvent.click(screen.getByRole("button", { name: "AI Assistant" }));
+    await userEvent.type(screen.getByLabelText("Message"), "Change things");
+    await userEvent.click(screen.getByRole("button", { name: /send/i }));
+    expect(boardArea).toHaveAttribute("inert");
+    expect(screen.getByText(/AI is updating your board/)).toBeInTheDocument();
+
+    respond(new Response(JSON.stringify({ reply: "Done", board: null })));
+    await screen.findByText("Done");
+    expect(boardArea).not.toHaveAttribute("inert");
+  });
+
+  it("keeps saving after a failed save and clears the notice", async () => {
+    fetchMock.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    renderBoard();
+
+    await typeInFirstColumnTitle("A");
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      /could not be saved/,
+    );
+
+    await userEvent.type(
+      within(getFirstColumn()).getByLabelText("Column title"),
+      "B",
+    );
+    await vi.waitFor(() =>
+      expect(lastSavedBoard().columns[0].title).toBe("BacklogAB"),
+    );
+    await vi.waitFor(() =>
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument(),
+    );
+  });
+
+  it("retries a failed save from the notice", async () => {
+    fetchMock.mockResolvedValueOnce(new Response("{}", { status: 500 }));
+    renderBoard();
+
+    await typeInFirstColumnTitle("X");
+    await userEvent.click(
+      await screen.findByRole("button", { name: /retry/i }),
+    );
+
+    await vi.waitFor(() =>
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument(),
+    );
+    expect(lastSavedBoard().columns[0].title).toBe("BacklogX");
+  });
+
+  it("reports an expired session when a save returns 401", async () => {
+    fetchMock.mockResolvedValueOnce(new Response("{}", { status: 401 }));
+    const onSessionExpired = vi.fn();
+    renderBoard(vi.fn(), onSessionExpired);
+
+    await typeInFirstColumnTitle("Z");
+    await vi.waitFor(() => expect(onSessionExpired).toHaveBeenCalledOnce());
   });
 });

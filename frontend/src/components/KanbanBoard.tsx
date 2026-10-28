@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import {
   DndContext,
@@ -20,30 +20,53 @@ import { createId, moveCard, type BoardData } from "@/lib/kanban";
 type KanbanBoardProps = {
   initialBoard: BoardData;
   onLogout: () => void;
+  onSessionExpired: () => void;
 };
 
-const saveBoard = async (board: BoardData) => {
-  await fetch("/api/board", {
+const saveBoard = (board: BoardData) =>
+  fetch("/api/board", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(board),
   });
-};
 
-export const KanbanBoard = ({ initialBoard, onLogout }: KanbanBoardProps) => {
+export const KanbanBoard = ({
+  initialBoard,
+  onLogout,
+  onSessionExpired,
+}: KanbanBoardProps) => {
   const [board, setBoard] = useState<BoardData>(initialBoard);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isAIWorking, setIsAIWorking] = useState(false);
+  const [saveFailed, setSaveFailed] = useState(false);
   // The board last stored on the server; saves run one at a time so the latest board wins
   const savedBoard = useRef(initialBoard);
   const saveQueue = useRef(Promise.resolve());
+
+  // Each save sends the whole board, so a successful later save also covers earlier failures
+  const queueSave = useCallback(
+    (next: BoardData) => {
+      saveQueue.current = saveQueue.current
+        .then(() => saveBoard(next))
+        .then((response) => {
+          if (response.status === 401) {
+            onSessionExpired();
+            return;
+          }
+          setSaveFailed(!response.ok);
+        })
+        .catch(() => setSaveFailed(true));
+    },
+    [onSessionExpired],
+  );
 
   useEffect(() => {
     if (board === savedBoard.current) {
       return;
     }
     savedBoard.current = board;
-    saveQueue.current = saveQueue.current.then(() => saveBoard(board));
-  }, [board]);
+    queueSave(board);
+  }, [board, queueSave]);
 
   // The chat endpoint has already saved boards it returns
   const handleAIBoardUpdate = (nextBoard: BoardData) => {
@@ -57,8 +80,6 @@ export const KanbanBoard = ({ initialBoard, onLogout }: KanbanBoardProps) => {
       activationConstraint: { distance: 6 },
     }),
   );
-
-  const cardsById = useMemo(() => board.cards, [board.cards]);
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveCardId(event.active.id as string);
@@ -132,7 +153,7 @@ export const KanbanBoard = ({ initialBoard, onLogout }: KanbanBoardProps) => {
     });
   };
 
-  const activeCard = activeCardId ? cardsById[activeCardId] : null;
+  const activeCard = activeCardId ? board.cards[activeCardId] : null;
 
   return (
     <div
@@ -189,13 +210,43 @@ export const KanbanBoard = ({ initialBoard, onLogout }: KanbanBoardProps) => {
           </div>
         </header>
 
+        {saveFailed && (
+          <div
+            role="alert"
+            className="flex items-center justify-between gap-4 rounded-2xl border border-[var(--secondary-purple)] bg-white px-5 py-3 text-sm font-medium text-[var(--secondary-purple)]"
+          >
+            Your latest changes could not be saved.
+            <button
+              type="button"
+              onClick={() => queueSave(board)}
+              className="rounded-full bg-[var(--secondary-purple)] px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white transition hover:brightness-110"
+            >
+              Retry
+            </button>
+          </div>
+        )}
+        {isAIWorking && (
+          <p
+            role="status"
+            className="text-sm font-medium text-[var(--primary-blue)]"
+          >
+            The AI is updating your board...
+          </p>
+        )}
+
         <DndContext
           sensors={sensors}
           collisionDetection={closestCorners}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          <div className="flex flex-col gap-4">
+          {/* Locked while the AI works, so its update can't overwrite edits made meanwhile */}
+          <div
+            inert={isAIWorking}
+            aria-busy={isAIWorking}
+            data-testid="board-area"
+            className={clsx("flex flex-col gap-4", isAIWorking && "opacity-60")}
+          >
             <div className="hidden gap-6 lg:grid lg:grid-cols-5">
               {board.columns.map((column) => (
                 <div
@@ -230,12 +281,12 @@ export const KanbanBoard = ({ initialBoard, onLogout }: KanbanBoardProps) => {
           </DragOverlay>
         </DndContext>
       </main>
-      {isChatOpen && (
-        <ChatSidebar
-          onClose={() => setIsChatOpen(false)}
-          onBoardUpdate={handleAIBoardUpdate}
-        />
-      )}
+      <ChatSidebar
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
+        onBoardUpdate={handleAIBoardUpdate}
+        onPendingChange={setIsAIWorking}
+      />
     </div>
   );
 };

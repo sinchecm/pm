@@ -143,29 +143,48 @@ These map to the fixes above; add them together with each fix:
 - the board is locked while the AI is working (M3)
 - the conversation survives closing and reopening the sidebar (M4)
 
+## Resolution (2026-10-28)
+
+Fixed: H1, H2, H3, M1, M2, M3, M4, M5, plus L1, L3, L4, L9 and the dead `useMemo` from L2. Not yet done: the rest of L2, L5-L8 and L10-L14.
+
+- H1/H2: `queueSave` in `KanbanBoard.tsx` catches failures so the queue keeps running. A 401 returns to login with a "session expired" notice; other failures show a notice with Retry.
+- H3/L4: the chat and login requests use `try/catch/finally`, so network errors restore the UI.
+- M1/M2: `/api/chat` maps `OpenAIError`, `ValidationError` and refusals to 502; the client uses a 60 s timeout with 1 retry.
+- M3: the board area is `inert` (with an "AI is updating your board" status) while a chat request is in flight.
+- M4: `ChatSidebar` stays mounted and is hidden with `isOpen`, keeping the conversation.
+- M5: all dependencies are upgraded to latest, and `npm audit` reports 0 vulnerabilities. Two exceptions:
+  - ESLint stays on 9.39.5: the plugins used by `eslint-config-next` don't support ESLint 10.
+  - TypeScript stays on 6.0.3: `typescript-eslint` supports `<6.1`.
+
+  The upgrade also required importing `@testing-library/jest-dom/vitest` (jest-dom 7), renaming the config to `vitest.config.mts` with `import.meta.dirname` (Vite 8), and restructuring board loading in `page.tsx` for the stricter `react-hooks/set-state-in-effect` rule.
+- L3: only a 401 counts as signed out; other load failures show an error.
+- L9: `start.sh` uses `set -e` and prints the real port; `start.ps1` stops on failure; `test-e2e.sh` gives up after 60 s and prints the logs.
+- Tests added: 3 backend (AI error, refusal and parse failure all return 502), 10 frontend unit (save failure and retry, 401 expiry, AI lock, conversation kept, chat network error, pending state, load error, login network error).
+
 ## Action plan
 
 In priority order. Each step should end with all three test suites green (`uv run pytest`, `npm run test:unit`, `scripts/test-e2e.sh`).
 
-1. [ ] Fix the save pipeline: keep the queue alive after failures, check `response.ok`, return to login on 401, show a "not saved" notice otherwise (H1, H2). Add tests.
-2. [ ] Make chat requests failure-safe on the client with `try/catch/finally` (H3). Add a test.
-3. [ ] Map all AI failures to 502 and set a 60 s timeout with 1 retry (M1, M2). Add tests.
-4. [ ] Lock board editing while an AI request is in flight (M3).
-5. [ ] Keep chat history when the sidebar closes (M4).
-6. [ ] Upgrade frontend dependencies and clear `npm audit` (M5).
+1. [x] Fix the save pipeline: keep the queue alive after failures, check `response.ok`, return to login on 401, show a "not saved" notice otherwise (H1, H2). Add tests.
+2. [x] Make chat requests failure-safe on the client with `try/catch/finally` (H3). Add a test.
+3. [x] Map all AI failures to 502 and set a 60 s timeout with 1 retry (M1, M2). Add tests.
+4. [x] Lock board editing while an AI request is in flight (M3).
+5. [x] Keep chat history when the sidebar closes (M4).
+6. [x] Upgrade frontend dependencies and clear `npm audit` (M5).
 7. [ ] Quick cleanups:
-   - [ ] remove the unused import, dead `useMemo` and `/api/me`, or document keeping `/api/me` (L1, L2)
+   - [x] remove the unused import and dead `useMemo` (L1, L2)
+   - [ ] remove `/api/me`, or document keeping it (L2)
    - [ ] de-duplicate the default board (L2)
    - [ ] fix stale npm scripts, README and template SVGs (L10)
    - [ ] add ruff (L12)
 8. [ ] Small hardening:
-   - [ ] only treat 401 as signed out (L3)
-   - [ ] login pending and network-error handling (L4)
+   - [x] only treat 401 as signed out (L3)
+   - [x] login pending and network-error handling (L4)
    - [ ] constant-time password comparison (L5)
    - [ ] input size limits (L6)
    - [ ] `SESSION_SECRET` from `.env` (L7)
    - [ ] non-empty titles (L8)
-   - [ ] script `set -e` and bounded wait (L9)
+   - [x] script `set -e` and bounded wait (L9)
 9. [ ] Optional:
    - [ ] drag handle for accessibility (L11)
    - [ ] tag the real-AI e2e tests (L13)

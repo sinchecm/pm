@@ -2,25 +2,35 @@ import { useState, type FormEvent } from "react";
 
 type LoginFormProps = {
   onLogin: () => void;
+  notice?: string;
 };
 
-export const LoginForm = ({ onLogin }: LoginFormProps) => {
+export const LoginForm = ({ onLogin, notice }: LoginFormProps) => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const response = await fetch("/api/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password }),
-    });
-    if (!response.ok) {
-      setError("Invalid username or password");
-      return;
+    setIsSubmitting(true);
+    setError("");
+    try {
+      const response = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      });
+      if (!response.ok) {
+        setError("Invalid username or password");
+        return;
+      }
+      onLogin();
+    } catch {
+      setError("Could not reach the server. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
-    onLogin();
   };
 
   return (
@@ -34,7 +44,9 @@ export const LoginForm = ({ onLogin }: LoginFormProps) => {
           <h1 className="mt-4 font-display text-3xl font-semibold text-[var(--navy-dark)]">
             Kanban Studio
           </h1>
-          <p className="mt-2 text-sm text-[var(--gray-text)]">Sign in to see your board.</p>
+          <p className="mt-2 text-sm text-[var(--gray-text)]">
+            Sign in to see your board.
+          </p>
         </div>
         <label className="block text-xs font-semibold uppercase tracking-[0.2em] text-[var(--gray-text)]">
           Username
@@ -57,14 +69,23 @@ export const LoginForm = ({ onLogin }: LoginFormProps) => {
             required
           />
         </label>
+        {notice && !error && (
+          <p className="text-sm font-medium text-[var(--primary-blue)]">
+            {notice}
+          </p>
+        )}
         {error && (
-          <p role="alert" className="text-sm font-medium text-[var(--secondary-purple)]">
+          <p
+            role="alert"
+            className="text-sm font-medium text-[var(--secondary-purple)]"
+          >
             {error}
           </p>
         )}
         <button
           type="submit"
-          className="w-full rounded-full bg-[var(--secondary-purple)] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-white transition hover:brightness-110"
+          disabled={isSubmitting}
+          className="w-full rounded-full bg-[var(--secondary-purple)] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-white transition hover:brightness-110 disabled:opacity-50"
         >
           Sign in
         </button>
