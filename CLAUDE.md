@@ -20,22 +20,19 @@ npm run dev              # UI only on :3000 (no API, so stuck at login)
 npm run build
 npm run lint
 npm run test:unit        # vitest (src/**/*.test.ts[x], jsdom)
-npm run test:e2e         # playwright (tests/) against the container at localhost:8001; run scripts/start.sh first
 npx vitest run src/lib/kanban.test.ts          # single unit test file
 npx vitest run -t "test name"                  # single unit test by name
-npx playwright test tests/kanban.spec.ts -g "name"  # single e2e test
 ```
 
-On this machine local Chromium lacks system libraries (needs `sudo npx playwright install-deps chromium`). Without them, run e2e in the official image (version must match `@playwright/test`):
+## E2E tests
 
-```bash
-docker run --rm --network host --user $(id -u):$(id -g) -e HOME=/tmp \
-  -v "$PWD":/work -w /work mcr.microsoft.com/playwright:v1.58.0-noble npx playwright test
-```
+Run from the repo root with `scripts/test-e2e.sh` (extra args go to `playwright test`, e.g. `scripts/test-e2e.sh tests/kanban.spec.ts -g "name"`). It starts a throwaway `pm-test` compose project on port 8002 with its own database volume, runs Playwright in the official Docker image (local Chromium lacks system libraries on this machine), then removes the container and volume.
+
+IMPORTANT: the app on port 8001 holds the user's real board. Never run e2e tests or board-changing API calls against it; if you must change it for a manual check, save the current board first and restore that, not the default.
 
 ## Frontend architecture
 
 - `src/lib/kanban.ts` holds the data model and pure logic: `BoardData` is normalized as `columns` (each with ordered `cardIds`) plus a `cards` record keyed by id. `moveCard` handles reorder within a column and moves across columns (dropping on a column id appends; dropping on a card id inserts at that card's index). `initialData` seeds the five fixed columns.
-- `src/components/KanbanBoard.tsx` owns all board state (`useState`) and the dnd-kit `DndContext`; it passes rename/add/delete handlers down to `KanbanColumn` -> `KanbanCard`. `KanbanCardPreview` renders the `DragOverlay`.
-- The `BoardData` shape is the natural JSON contract for the future backend API and the AI structured-output board updates (Parts 5-10).
+- `src/components/KanbanBoard.tsx` owns all board state (`useState`) and the dnd-kit `DndContext`; it passes rename/add/edit/delete handlers down to `KanbanColumn` -> `KanbanCard`. `KanbanCardPreview` renders the `DragOverlay`.
+- The `BoardData` shape is the JSON contract for `/api/board`. The AI uses a nested variant (columns containing cards) converted in `backend/app/ai.py`.
 - Path alias `@/` maps to `src/`. Styling is Tailwind v4.

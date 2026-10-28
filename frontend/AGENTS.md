@@ -22,7 +22,7 @@ Next.js 16 (App Router), React 19, TypeScript, Tailwind v4, dnd-kit. Built as a 
 ## Tests
 
 - Unit (Vitest + Testing Library, jsdom): `src/lib/kanban.test.ts` (moveCard), `src/components/KanbanBoard.test.tsx` (UI actions and the PUT saved for each), `src/app/page.test.tsx` (board loading and sign-in flow). Both stub `fetch` with `vi.stubGlobal`. Setup in `src/test/setup.ts`.
-- E2E (Playwright, Chromium): `tests/auth.spec.ts` (login, bad credentials, session on reload, logout), `tests/kanban.spec.ts` (load board, add, edit, rename, drag between columns), `tests/persistence.spec.ts` (all changes survive reload and re-login). `loginWithFreshBoard` in `tests/helpers.ts` resets the stored board first; tests run with one worker because they share the user's board. Tests run against the app container at `http://localhost:8001` (override with `BASE_URL`), because the frontend needs the API. Start it with `scripts/start.sh` first.
+- E2E (Playwright, Chromium): `tests/auth.spec.ts` (login, bad credentials, session on reload, logout), `tests/kanban.spec.ts` (load board, add, edit, rename, drag between columns), `tests/persistence.spec.ts` (all changes survive reload and re-login). `loginWithFreshBoard` in `tests/helpers.ts` resets the stored board first; tests run with one worker because they share the user's board. Tests need the API, so they run against a throwaway test container on `http://localhost:8002` started by `scripts/test-e2e.sh` (override with `BASE_URL`). Never point them at the real app on 8001: they reset the board.
 
 ## Commands
 
@@ -31,7 +31,7 @@ npm run dev
 npm run build
 npm run lint
 npm run test:unit
-npm run test:e2e   # needs the container running
+../scripts/test-e2e.sh   # e2e in an isolated test container
 ```
 
 `npm run dev` serves the UI without the API, so it only shows the login form; use the container for real testing.
