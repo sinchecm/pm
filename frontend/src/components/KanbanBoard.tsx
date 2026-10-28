@@ -26,7 +26,7 @@ export const KanbanBoard = ({ onLogout }: KanbanBoardProps) => {
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 6 },
-    })
+    }),
   );
 
   const cardsById = useMemo(() => board.cards, [board.cards]);
@@ -53,7 +53,7 @@ export const KanbanBoard = ({ onLogout }: KanbanBoardProps) => {
     setBoard((prev) => ({
       ...prev,
       columns: prev.columns.map((column) =>
-        column.id === columnId ? { ...column, title } : column
+        column.id === columnId ? { ...column, title } : column,
       ),
     }));
   };
@@ -69,7 +69,7 @@ export const KanbanBoard = ({ onLogout }: KanbanBoardProps) => {
       columns: prev.columns.map((column) =>
         column.id === columnId
           ? { ...column, cardIds: [...column.cardIds, id] }
-          : column
+          : column,
       ),
     }));
   };
@@ -89,7 +89,7 @@ export const KanbanBoard = ({ onLogout }: KanbanBoardProps) => {
       return {
         ...prev,
         cards: Object.fromEntries(
-          Object.entries(prev.cards).filter(([id]) => id !== cardId)
+          Object.entries(prev.cards).filter(([id]) => id !== cardId),
         ),
         columns: prev.columns.map((column) =>
           column.id === columnId
@@ -97,7 +97,7 @@ export const KanbanBoard = ({ onLogout }: KanbanBoardProps) => {
                 ...column,
                 cardIds: column.cardIds.filter((id) => id !== cardId),
               }
-            : column
+            : column,
         ),
       };
     });
@@ -121,8 +121,9 @@ export const KanbanBoard = ({ onLogout }: KanbanBoardProps) => {
                 Kanban Studio
               </h1>
               <p className="mt-3 max-w-xl text-sm leading-6 text-[var(--gray-text)]">
-                Keep momentum visible. Rename columns, drag cards between stages,
-                and capture quick notes without getting buried in settings.
+                Keep momentum visible. Rename columns, drag cards between
+                stages, and capture quick notes without getting buried in
+                settings.
               </p>
             </div>
             <div className="flex flex-col items-end gap-3">
@@ -143,17 +144,6 @@ export const KanbanBoard = ({ onLogout }: KanbanBoardProps) => {
               </div>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-4">
-            {board.columns.map((column) => (
-              <div
-                key={column.id}
-                className="flex items-center gap-2 rounded-full border border-[var(--stroke)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--navy-dark)]"
-              >
-                <span className="h-2 w-2 rounded-full bg-[var(--accent-yellow)]" />
-                {column.title}
-              </div>
-            ))}
-          </div>
         </header>
 
         <DndContext
@@ -162,19 +152,32 @@ export const KanbanBoard = ({ onLogout }: KanbanBoardProps) => {
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          <section className="grid gap-6 lg:grid-cols-5">
-            {board.columns.map((column) => (
-              <KanbanColumn
-                key={column.id}
-                column={column}
-                cards={column.cardIds.map((cardId) => board.cards[cardId])}
-                onRename={handleRenameColumn}
-                onAddCard={handleAddCard}
-                onDeleteCard={handleDeleteCard}
-                onEditCard={handleEditCard}
-              />
-            ))}
-          </section>
+          <div className="flex flex-col gap-4">
+            <div className="hidden gap-6 lg:grid lg:grid-cols-5">
+              {board.columns.map((column) => (
+                <div
+                  key={column.id}
+                  className="flex min-w-0 items-center gap-2 rounded-full border border-[var(--stroke)] bg-white/80 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--navy-dark)]"
+                >
+                  <span className="h-2 w-2 shrink-0 rounded-full bg-[var(--accent-yellow)]" />
+                  <span className="truncate">{column.title}</span>
+                </div>
+              ))}
+            </div>
+            <section className="grid gap-6 lg:grid-cols-5">
+              {board.columns.map((column) => (
+                <KanbanColumn
+                  key={column.id}
+                  column={column}
+                  cards={column.cardIds.map((cardId) => board.cards[cardId])}
+                  onRename={handleRenameColumn}
+                  onAddCard={handleAddCard}
+                  onDeleteCard={handleDeleteCard}
+                  onEditCard={handleEditCard}
+                />
+              ))}
+            </section>
+          </div>
           <DragOverlay>
             {activeCard ? (
               <div className="w-[260px]">
