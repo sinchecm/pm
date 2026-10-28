@@ -52,9 +52,9 @@ Success criteria: `http://localhost:8001/` shows the Kanban demo served by FastA
 
 ## Part 4: Fake user sign in
 
-- [ ] Backend: `SessionMiddleware`, `POST /api/login`, `POST /api/logout`, `GET /api/me`
-- [ ] Frontend: on load call `/api/me`; show a login form if not signed in, the board if signed in; a Log out button in the header
-- [ ] Wrong credentials show an error message
+- [x] Backend: `SessionMiddleware`, `POST /api/login`, `POST /api/logout`, `GET /api/me`
+- [x] Frontend: on load call `/api/me`; show a login form if not signed in, the board if signed in; a Log out button in the header
+- [x] Wrong credentials show an error message
 
 Tests:
 - pytest: login success, login failure (401), `/api/me` with and without a session, logout clears session

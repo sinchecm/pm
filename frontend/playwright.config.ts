@@ -1,8 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 
-// Set BASE_URL (e.g. http://localhost:8001) to test the running container instead of the dev server
-const baseURL = process.env.BASE_URL;
-
+// E2E tests run against the app container (scripts/start.sh), which serves the frontend and the API
 export default defineConfig({
   testDir: "./tests",
   timeout: 60_000,
@@ -10,17 +8,9 @@ export default defineConfig({
     timeout: 10_000,
   },
   use: {
-    baseURL: baseURL ?? "http://127.0.0.1:3000",
+    baseURL: process.env.BASE_URL ?? "http://localhost:8001",
     trace: "retain-on-failure",
   },
-  webServer: baseURL
-    ? undefined
-    : {
-        command: "npm run dev -- --hostname 127.0.0.1 --port 3000",
-        url: "http://127.0.0.1:3000",
-        reuseExistingServer: true,
-        timeout: 120_000,
-      },
   projects: [
     {
       name: "chromium",
