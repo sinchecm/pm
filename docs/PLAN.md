@@ -73,11 +73,11 @@ Success criteria: user has approved the schema.
 
 ## Part 6: Backend
 
-- [ ] SQLite access with the standard library `sqlite3` module; create the db file and tables on startup if missing (path configurable, default in the compose volume)
-- [ ] Seed the `user` row and a default board on first access
-- [ ] `GET /api/board` returns the signed-in user's board
-- [ ] `PUT /api/board` replaces it, validated with Pydantic models mirroring `BoardData`
-- [ ] Both routes return 401 without a session
+- [x] SQLite access with the standard library `sqlite3` module; create the db file and tables on startup if missing (path configurable, default in the compose volume)
+- [x] Seed the `user` row and a default board on first access
+- [x] `GET /api/board` returns the signed-in user's board
+- [x] `PUT /api/board` replaces it, validated with Pydantic models mirroring `BoardData`
+- [x] Both routes return 401 without a session
 
 Tests (pytest, temp db per test):
 - db is created when missing; default board is seeded

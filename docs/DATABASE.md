@@ -16,7 +16,7 @@ SQLite, accessed with Python's built-in `sqlite3` module. Schema: `docs/schema.j
 
 ## Validation
 
-`PUT /api/board` and AI updates are validated with Pydantic models mirroring `BoardData` before saving. Columns are fixed, so a valid board must keep the same five column ids (titles may change), and every id in `cardIds` must exist in `cards`.
+`PUT /api/board` and AI updates are validated with Pydantic models mirroring `BoardData` before saving. Columns are fixed, so a valid board must keep the same five column ids in order (titles may change). Every card must appear in exactly one column (no missing, unknown or duplicate ids), and each `cards` key must match its card's `id`.
 
 ## Lifecycle
 
