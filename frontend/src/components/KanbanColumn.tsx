@@ -1,23 +1,38 @@
 import clsx from "clsx";
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import type { Card, Column } from "@/lib/kanban";
+import { isOverdue, type Card, type CardFields, type Column } from "@/lib/kanban";
 import { KanbanCard } from "@/components/KanbanCard";
 import { NewCardForm } from "@/components/NewCardForm";
+import type { CommentsContext } from "@/components/CardComments";
 
 type KanbanColumnProps = {
   column: Column;
   cards: Card[];
+  today: string;
+  assignees: string[];
+  commentCounts: Record<string, number>;
+  comments: CommentsContext;
+  isDone: boolean;
+  canDelete: boolean;
   onRename: (columnId: string, title: string) => void;
+  onDelete: (columnId: string) => void;
   onAddCard: (columnId: string, title: string, details: string) => void;
   onDeleteCard: (columnId: string, cardId: string) => void;
-  onEditCard: (cardId: string, title: string, details: string) => void;
+  onEditCard: (cardId: string, fields: CardFields) => void;
 };
 
 export const KanbanColumn = ({
   column,
   cards,
+  today,
+  assignees,
+  commentCounts,
+  comments,
+  isDone,
+  canDelete,
   onRename,
+  onDelete,
   onAddCard,
   onDeleteCard,
   onEditCard,
@@ -28,18 +43,30 @@ export const KanbanColumn = ({
     <section
       ref={setNodeRef}
       className={clsx(
-        "flex min-h-[520px] flex-col rounded-3xl border border-[var(--stroke)] bg-[var(--surface-strong)] p-4 shadow-[var(--shadow)] transition",
+        "flex min-h-[520px] min-w-[220px] max-w-[360px] flex-1 flex-col rounded-3xl border border-[var(--stroke)] bg-[var(--surface-strong)] p-4 shadow-[var(--shadow)] transition",
         isOver && "ring-2 ring-[var(--accent-yellow)]"
       )}
       data-testid={`column-${column.id}`}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="w-full">
-          <div className="flex items-center gap-3">
-            <div className="h-2 w-10 rounded-full bg-[var(--accent-yellow)]" />
-            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--gray-text)]">
-              {cards.length} cards
-            </span>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="h-2 w-10 rounded-full bg-[var(--accent-yellow)]" />
+              <span className="whitespace-nowrap text-xs font-semibold uppercase tracking-[0.2em] text-[var(--gray-text)]">
+                {cards.length} cards
+              </span>
+            </div>
+            {canDelete && (
+              <button
+                type="button"
+                onClick={() => onDelete(column.id)}
+                className="rounded-full px-2 py-1 text-xs font-semibold text-[var(--gray-text)] transition hover:text-[var(--navy-dark)]"
+                aria-label={`Delete column ${column.title}`}
+              >
+                Remove
+              </button>
+            )}
           </div>
           <input
             value={column.title}
@@ -50,11 +77,18 @@ export const KanbanColumn = ({
         </div>
       </div>
       <div className="mt-4 flex flex-1 flex-col gap-3">
-        <SortableContext items={column.cardIds} strategy={verticalListSortingStrategy}>
+        <SortableContext
+          items={cards.map((card) => card.id)}
+          strategy={verticalListSortingStrategy}
+        >
           {cards.map((card) => (
             <KanbanCard
               key={card.id}
               card={card}
+              isOverdue={!isDone && isOverdue(card, today)}
+              assignees={assignees}
+              commentCount={commentCounts[card.id] ?? 0}
+              comments={comments}
               onDelete={(cardId) => onDeleteCard(column.id, cardId)}
               onEdit={onEditCard}
             />

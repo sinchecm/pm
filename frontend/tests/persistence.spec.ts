@@ -1,25 +1,15 @@
-import { expect, test, type Page } from "@playwright/test";
-import { expectBoard, loginWithFreshBoard } from "./helpers";
-
-const dragCardToColumn = async (page: Page, cardId: string, columnId: string) => {
-  const cardBox = await page.getByTestId(`card-${cardId}`).boundingBox();
-  const columnBox = await page.getByTestId(`column-${columnId}`).boundingBox();
-  if (!cardBox || !columnBox) {
-    throw new Error("Unable to resolve drag coordinates.");
-  }
-  await page.mouse.move(cardBox.x + cardBox.width / 2, cardBox.y + cardBox.height / 2);
-  await page.mouse.down();
-  await page.mouse.move(columnBox.x + columnBox.width / 2, columnBox.y + 120, { steps: 12 });
-  await page.mouse.up();
-};
-
-const waitForSave = (page: Page) =>
-  page.waitForResponse(
-    (response) => response.url().endsWith("/api/board") && response.request().method() === "PUT"
-  );
+import { expect, test } from "@playwright/test";
+import {
+  PASSWORD,
+  dragCardToColumn,
+  expectBoard,
+  fillCredentials,
+  registerUser,
+  waitForSave,
+} from "./helpers";
 
 test("persists all board changes across reload and re-login", async ({ page }) => {
-  await loginWithFreshBoard(page);
+  const username = await registerUser(page);
   const backlog = page.getByTestId("column-col-backlog");
 
   // Rename a column
@@ -58,8 +48,7 @@ test("persists all board changes across reload and re-login", async ({ page }) =
   await verify();
 
   await page.getByRole("button", { name: /log out/i }).click();
-  await page.getByLabel("Username").fill("user");
-  await page.getByLabel("Password").fill("password");
-  await page.getByRole("button", { name: /sign in/i }).click();
+  await fillCredentials(page, username, PASSWORD);
+  await page.getByRole("button", { name: /^sign in$/i }).click();
   await verify();
 });

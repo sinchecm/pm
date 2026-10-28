@@ -8,14 +8,16 @@ type Message = {
 };
 
 type ChatSidebarProps = {
+  boardId: number;
   isOpen: boolean;
   onClose: () => void;
-  onBoardUpdate: (board: BoardData) => void;
+  onBoardUpdate: (board: BoardData, etag: string | null) => void;
   onPendingChange: (isPending: boolean) => void;
 };
 
 // Stays mounted while closed so the conversation is kept
 export const ChatSidebar = ({
+  boardId,
   isOpen,
   onClose,
   onBoardUpdate,
@@ -47,7 +49,7 @@ export const ChatSidebar = ({
     onPendingChange(true);
 
     try {
-      const response = await fetch("/api/chat", {
+      const response = await fetch(`/api/boards/${boardId}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message, history: messages }),
@@ -62,7 +64,7 @@ export const ChatSidebar = ({
         { role: "assistant", content: data.reply },
       ]);
       if (data.board) {
-        onBoardUpdate(data.board);
+        onBoardUpdate(data.board, response.headers.get("ETag"));
       }
     } catch {
       setMessages((prev) => prev.slice(0, -1));
@@ -87,7 +89,7 @@ export const ChatSidebar = ({
             AI Assistant
           </h2>
           <p className="mt-1 text-sm text-[var(--gray-text)]">
-            Ask about your board, or ask me to add, edit or move cards.
+            Ask about this board, or ask me to add, edit or move cards and columns.
           </p>
         </div>
         <button

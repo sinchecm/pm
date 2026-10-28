@@ -24,6 +24,7 @@ const renderSidebar = (
 ) =>
   render(
     <ChatSidebar
+      boardId={7}
       isOpen
       onBoardUpdate={onBoardUpdate}
       onClose={onClose}
@@ -76,7 +77,7 @@ describe("ChatSidebar", () => {
     await send("Second");
     await screen.findByText("Second reply");
 
-    expect(fetchMock.mock.calls[0][0]).toBe("/api/chat");
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/boards/7/chat");
     expect(sentBody(0)).toEqual({ message: "First", history: [] });
     expect(sentBody(1)).toEqual({
       message: "Second",
@@ -89,14 +90,16 @@ describe("ChatSidebar", () => {
 
   it("passes a returned board to onBoardUpdate", async () => {
     fetchMock.mockResolvedValue(
-      jsonResponse(200, { reply: "Updated", board: initialData }),
+      new Response(JSON.stringify({ reply: "Updated", board: initialData }), {
+        headers: { ETag: '"9"' },
+      }),
     );
     const onBoardUpdate = vi.fn();
     renderSidebar(onBoardUpdate);
 
     await send("Change the board");
     await screen.findByText("Updated");
-    expect(onBoardUpdate).toHaveBeenCalledWith(initialData);
+    expect(onBoardUpdate).toHaveBeenCalledWith(initialData, '"9"');
   });
 
   it("does not call onBoardUpdate for reply-only responses", async () => {

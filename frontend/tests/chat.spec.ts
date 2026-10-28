@@ -1,9 +1,9 @@
 import { expect, test } from "@playwright/test";
-import { loginWithFreshBoard } from "./helpers";
+import { registerUser } from "./helpers";
 
 // Uses the real AI through the test container (needs OPENROUTER_API_KEY in .env)
 test("AI chat creates a card that appears on the board without reload", async ({ page }) => {
-  await loginWithFreshBoard(page);
+  await registerUser(page);
 
   await page.getByRole("button", { name: "AI Assistant", exact: true }).click();
   await page.getByLabel("Message").fill("Add a card titled 'Plan launch party' to the Backlog column.");
@@ -21,7 +21,7 @@ test("AI chat creates a card that appears on the board without reload", async ({
 });
 
 test("AI chat answers a question without changing the board", async ({ page }) => {
-  await loginWithFreshBoard(page);
+  await registerUser(page);
 
   await page.getByRole("button", { name: "AI Assistant", exact: true }).click();
   await page.getByLabel("Message").fill("How many cards are in the Done column?");

@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
-from app import auth, board, chat, db
+from app import auth, boards, chat, comments, db, my_cards
 
 STATIC_DIR = Path(__file__).parent.parent / "static"
 
@@ -22,8 +22,10 @@ app = FastAPI(lifespan=lifespan)
 app.add_middleware(SessionMiddleware, secret_key=secrets.token_hex(32))
 
 app.include_router(auth.router)
-app.include_router(board.router)
+app.include_router(boards.router)
 app.include_router(chat.router)
+app.include_router(my_cards.router)
+app.include_router(comments.router)
 
 
 @app.get("/api/health")

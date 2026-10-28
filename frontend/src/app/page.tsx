@@ -1,56 +1,43 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { KanbanBoard } from "@/components/KanbanBoard";
-import { LoginForm } from "@/components/LoginForm";
-import type { BoardData } from "@/lib/kanban";
+import { useCallback, useEffect, useState } from "react";
+import { AuthForm } from "@/components/AuthForm";
+import { Workspace } from "@/components/Workspace";
+import { isUnauthorized, request } from "@/lib/api";
+import type { User } from "@/lib/kanban";
 
 type Status = "loading" | "ready" | "error";
 
-// Resolves to null when signed out (401); rejects on any other failure
-const fetchBoard = async (): Promise<BoardData | null> => {
-  const response = await fetch("/api/board");
-  if (response.status === 401) {
-    return null;
-  }
-  if (!response.ok) {
-    throw new Error(`Board request failed: ${response.status}`);
-  }
-  return response.json();
-};
-
 export default function Home() {
   const [status, setStatus] = useState<Status>("loading");
-  const [board, setBoard] = useState<BoardData | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [notice, setNotice] = useState("");
 
-  const loadBoard = () =>
-    fetchBoard().then(
-      (data) => {
-        setBoard(data);
+  useEffect(() => {
+    request<User>("/api/me").then(
+      (me) => {
+        setUser(me);
         setStatus("ready");
       },
-      () => setStatus("error"),
+      (error) => setStatus(isUnauthorized(error) ? "ready" : "error"),
     );
-
-  useEffect(() => {
-    loadBoard();
   }, []);
 
-  const handleLogin = async () => {
+  const handleAuthenticated = (signedIn: User) => {
     setNotice("");
-    await loadBoard();
+    setUser(signedIn);
   };
 
   const handleLogout = async () => {
     await fetch("/api/logout", { method: "POST" });
-    setBoard(null);
+    setUser(null);
   };
 
-  const handleSessionExpired = () => {
-    setNotice("Your session expired. Please sign in again.");
-    setBoard(null);
-  };
+  // Stable, so effects in the workspace that depend on it don't re-run
+  const handleSignedOut = useCallback((message: string) => {
+    setNotice(message);
+    setUser(null);
+  }, []);
 
   if (status === "loading") {
     return null;
@@ -62,19 +49,19 @@ export default function Home() {
           role="alert"
           className="text-sm font-medium text-[var(--secondary-purple)]"
         >
-          Could not load your board. Please reload the page.
+          Could not reach the server. Please reload the page.
         </p>
       </main>
     );
   }
-  if (!board) {
-    return <LoginForm onLogin={handleLogin} notice={notice} />;
+  if (!user) {
+    return <AuthForm onAuthenticated={handleAuthenticated} notice={notice} />;
   }
   return (
-    <KanbanBoard
-      initialBoard={board}
+    <Workspace
+      user={user}
       onLogout={handleLogout}
-      onSessionExpired={handleSessionExpired}
+      onSignedOut={handleSignedOut}
     />
   );
 }

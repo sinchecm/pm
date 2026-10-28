@@ -180,3 +180,4 @@ backend/static/
 
 # SQLite database
 backend/data/
+backups/

@@ -1,22 +1,28 @@
 import os
+from datetime import date
 from typing import Literal
 
 from openai import OpenAI
 from pydantic import BaseModel
 
-from app.models import BoardData
+from app.models import BoardData, ChecklistItem, Priority
 
 MODEL = "openai/gpt-oss-120b"
 
 SYSTEM_PROMPT = """You are a helpful project management assistant for a Kanban board.
-The user's current board is below as JSON. It has five fixed columns; their ids must not change,
-but you may rename their titles. Cards can be created, edited, moved between columns, reordered or deleted.
+The user's current board is below as JSON. Columns can be added, renamed, reordered or removed
+(at least one must remain); keep the ids of existing columns and give new columns a unique id like
+"col-ai-<short-slug>". Cards can be created, edited, moved between columns, reordered or deleted.
+Each card has a title, details, a priority ("low", "medium", "high" or null) and a due date
+("YYYY-MM-DD" or null), labels (short tags) and a checklist of items with an id, text and done
+flag (give new items a unique id like "item-ai-<short-slug>"), and an assignee (one of the board
+members listed below, or null). The last column means done.
 
 Always reply to the user in "reply". If the user asks you to change the board, return the complete
 updated board in "board" (every column and every remaining card, in order). Keep existing card ids;
 give new cards a unique id like "card-ai-<short-slug>". If no change is needed, set "board" to null.
 
-Current board:
+Today is {today}. Board members: {members}. Current board:
 """
 
 
@@ -29,6 +35,12 @@ class AICard(BaseModel):
     id: str
     title: str
     details: str
+    priority: Priority | None
+    # A plain string keeps the schema simple for the model; BoardData validates the date
+    dueDate: str | None
+    labels: list[str]
+    checklist: list[ChecklistItem]
+    assignee: str | None
 
 
 class AIColumn(BaseModel):
@@ -68,7 +80,10 @@ def to_ai_board(board: BoardData) -> AIBoard:
             AIColumn(
                 id=column.id,
                 title=column.title,
-                cards=[AICard(**board.cards[card_id].model_dump()) for card_id in column.cardIds],
+                cards=[
+                    AICard(**board.cards[card_id].model_dump(mode="json"))
+                    for card_id in column.cardIds
+                ],
             )
             for column in board.columns
         ]
@@ -94,9 +109,17 @@ def from_ai_board(ai_board: AIBoard) -> BoardData:
     )
 
 
-def build_messages(board: BoardData, history: list[Message], message: str) -> list[dict]:
+def build_messages(
+    board: BoardData, members: list[str], history: list[Message], message: str
+) -> list[dict]:
     return [
-        {"role": "system", "content": SYSTEM_PROMPT + to_ai_board(board).model_dump_json()},
+        {
+            "role": "system",
+            "content": SYSTEM_PROMPT.format(
+                today=date.today().isoformat(), members=", ".join(members)
+            )
+            + to_ai_board(board).model_dump_json(),
+        },
         *(item.model_dump() for item in history),
         {"role": "user", "content": message},
     ]

@@ -132,3 +132,82 @@ Tests:
 - Playwright against the container (real AI, skippable): ask the AI to create a card and see it appear on the board without reload
 
 Success criteria: user can chat with the AI in the sidebar, and AI-driven board changes appear on the board automatically.
+
+---
+
+# Phase 2: Comprehensive project management
+
+Goal: grow the MVP into a multi-user, multi-board project management app, keeping tests strong at every step. Parts are built as vertical slices (backend + frontend + tests).
+
+## Key decisions
+
+- Real accounts: users register with a username and password, hashed with the standard library `hashlib.scrypt` (no new dependency). The demo account `user` / `password` is still seeded so the original flow keeps working.
+- Sessions store the user id; `current_user` loads the user from the db, so deleting an account ends its sessions.
+- Many boards per user. `boards` loses its `UNIQUE (user_id)` and gains `name` and `created_at`. Board data stays one JSON document per board.
+- Schema versioning with `PRAGMA user_version`. Version 0 (the MVP layout) is migrated in place on startup, keeping existing users and boards. The migration is tested against a v0 database file.
+- Columns become flexible (add, rename, remove; at least one). The last column counts as "done" for overdue stats.
+- Cards gain optional `priority` (`low` | `medium` | `high`) and `dueDate` (ISO date).
+- API: `/api/board` is replaced by `/api/boards` (list/create) and `/api/boards/{id}` (get/put data, patch name, delete); chat moves to `/api/boards/{id}/chat`. Boards of other users return 404.
+- E2E tests register a fresh user per test, so they are isolated without resetting shared data.
+
+## Part 11: Accounts
+
+- [x] Schema v1 with migration from v0; seed the demo user
+- [x] `POST /api/register`, db-backed `POST /api/login`, `GET /api/me`, `PUT /api/me/password`, `DELETE /api/me`
+- [x] Frontend: sign in / create account form; account settings (change password, delete account)
+
+Tests: pytest for registration (success, duplicate 409, validation 422), login against the db, password change, account deletion (sessions end, boards removed), v0 migration. Vitest for the auth form and account settings. Playwright: register, sign out, sign back in; change password.
+
+## Part 12: Multiple boards
+
+- [x] Boards CRUD API scoped to the signed-in user; new users get a starter board
+- [x] Chat per board
+- [x] Frontend: board list sidebar (select, create, rename, delete), selected board kept in the URL hash
+
+Tests: pytest for CRUD, ownership (404 for another user's board), chat on a specific board. Vitest for the workspace. Playwright: create, switch, rename, delete boards; data stays separate.
+
+## Part 13: Richer boards
+
+- [x] Add and remove columns
+- [x] Card priority and due date (edit form, badges, overdue highlight)
+- [x] Search and priority filter; board stats (cards, high priority, overdue)
+- [x] AI prompt knows about flexible columns, priority and due dates
+
+Tests: pytest validation of the new fields and columns; Vitest for column add/remove, card fields, filters and stats; Playwright for each.
+
+## Part 14: Board sharing
+
+- [x] Schema v2: `board_members (board_id, user_id, created_at)` and a `version` counter on `boards`; migrate v1 in place
+- [x] Owners add members by username and remove them; members can view, edit and chat, and can leave; only owners rename, delete and manage members (403 otherwise)
+- [x] Board list includes shared boards with `owner` and `role`
+- [x] Optimistic concurrency: `GET /api/boards/{id}` returns an `ETag` (the version); `PUT` with `If-Match` returns 412 if the board changed since; the client reloads the latest board and says so. Chat saves only if the board didn't change while the AI worked (409)
+- [x] Frontend: members panel (share, remove, leave), shared boards in the sidebar, owner-only controls hidden for members
+
+Tests: pytest for access rules per role, member management, migration from v1, ETag/If-Match and chat conflicts, account deletion cleaning memberships. Vitest for the members panel, conflict reload, role-based controls. Playwright with two users: share, edit as member, see it as owner, conflict reload, leave.
+
+## Part 15: Labels and checklists
+
+- [x] Cards gain `labels` (list of short tags) and `checklist` (items with `id`, `text`, `done`); both default to empty, so existing boards stay valid
+- [x] Card view shows label chips and the checklist with progress; items can be ticked without opening the editor
+- [x] Editor: labels as comma-separated text, checklist one item per line (ticks kept for unchanged lines)
+- [x] Label filter; search also matches labels; the AI can read and set both
+
+Tests: pytest validation and AI round trip; Vitest for parsing helpers, ticking, editing and filtering; Playwright for adding labels and checklist items, ticking, filtering, persistence.
+
+## Part 16: Assignees and My cards
+
+- [x] Cards gain `assignee` (a username or null). A board save is rejected (422) if a card is assigned to someone who is not the owner or a member; the AI is told the members and its board is checked the same way
+- [x] Removing a member, a member leaving, or deleting an account unassigns that user's cards on the affected boards (the board version changes)
+- [x] `GET /api/me/cards`: open cards (not in a board's last column) assigned to me across all my boards, with board and column, soonest due first
+- [x] Frontend: assignee select in the card editor, assignee chip on cards, assignee filter, a "My cards" view in the sidebar that links to each card's board
+
+Tests: pytest for assignee validation, unassignment on removal/leave/deletion, my-cards contents and order, AI assignee check. Vitest for the editor, chip, filter and My cards view. Playwright: owner assigns a card to a member, the member sees it in My cards and opens the board; removing the member unassigns it.
+
+## Part 17: Card comments
+
+- [x] Schema v3: `comments (id, board_id, card_id, user_id, text, created_at)`; additive, so older databases just gain the table
+- [x] `GET/POST /api/boards/{id}/cards/{card_id}/comments` (owner or member; 404 for a card not on the board; text 1-2000 chars), `DELETE /api/boards/{id}/comments/{comment_id}` (the author or the board owner), `GET /api/boards/{id}/comment-counts`
+- [x] The author comes from the session, never from the client. Comments of cards removed from the board are deleted on save; deleting a board or an account deletes its comments
+- [x] Frontend: comment count on each card; a comments panel on the card to read, post and delete
+
+Tests: pytest for access, validation, authorship, deletion rights, cleanup and counts. Vitest for the panel and counts. Playwright: two users comment on a shared card; the count shows; deleting a card removes its comments.

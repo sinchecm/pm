@@ -1,13 +1,14 @@
 import { expect, test } from "@playwright/test";
-import { loginWithFreshBoard } from "./helpers";
+import { dragCardToColumn, expectBoard, registerUser, waitForSave } from "./helpers";
 
 test.beforeEach(async ({ page }) => {
-  await loginWithFreshBoard(page);
+  await registerUser(page);
 });
 
 test("loads the kanban board", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Kanban Studio" })).toBeVisible();
-  await expect(page.locator('[data-testid^="column-"]')).toHaveCount(5);
+  await expectBoard(page);
+  await expect(page.getByTestId("board-stats")).toContainText("8 cards");
 });
 
 test("adds a card to a column", async ({ page }) => {
@@ -36,24 +37,92 @@ test("renames a column", async ({ page }) => {
 });
 
 test("moves a card between columns", async ({ page }) => {
-  const card = page.getByTestId("card-card-1");
   const targetColumn = page.getByTestId("column-col-review");
-  const cardBox = await card.boundingBox();
-  const columnBox = await targetColumn.boundingBox();
-  if (!cardBox || !columnBox) {
-    throw new Error("Unable to resolve drag coordinates.");
-  }
-
-  await page.mouse.move(
-    cardBox.x + cardBox.width / 2,
-    cardBox.y + cardBox.height / 2
-  );
-  await page.mouse.down();
-  await page.mouse.move(
-    columnBox.x + columnBox.width / 2,
-    columnBox.y + 120,
-    { steps: 12 }
-  );
-  await page.mouse.up();
+  await dragCardToColumn(page, "card-1", "col-review");
   await expect(targetColumn.getByTestId("card-card-1")).toBeVisible();
+});
+
+test("adds and removes columns", async ({ page }) => {
+  const saved = waitForSave(page);
+  await page.getByRole("button", { name: /add column/i }).click();
+  await expectBoard(page, 6);
+  await saved;
+  const newColumn = page.locator('[data-testid^="column-"]').last();
+  await newColumn.getByLabel("Column title").fill("Blocked");
+
+  page.on("dialog", (dialog) => dialog.accept());
+  await page.getByRole("button", { name: "Delete column Backlog" }).click();
+  await expectBoard(page, 5);
+  await expect(page.getByText("Align roadmap themes")).toHaveCount(0);
+
+  await page.reload();
+  await expectBoard(page, 5);
+  await expect(page.locator('[data-testid^="column-"]').last().getByLabel("Column title")).toHaveValue(
+    "Blocked"
+  );
+  await expect(page.getByTestId("column-col-backlog")).toHaveCount(0);
+});
+
+test("sets priority and due date on a card", async ({ page }) => {
+  const card = page.getByTestId("card-card-7");
+  await card.getByRole("button", { name: /edit/i }).click();
+  await card.getByLabel("Priority").selectOption("high");
+  await card.getByLabel("Due date").fill("2020-01-15");
+  const saved = waitForSave(page);
+  await card.getByRole("button", { name: /save/i }).click();
+  await saved;
+
+  // card-7 is in Done (the last column), so it is not counted as overdue there
+  await expect(card.getByText("High priority")).toBeVisible();
+  await expect(card.getByTestId("due-date")).toHaveText("Due Jan 15, 2020");
+
+  await dragCardToColumn(page, "card-7", "col-review");
+  await expect(page.getByTestId("column-col-review").getByTestId("card-card-7")).toBeVisible();
+  await expect(page.getByTestId("card-card-7").getByTestId("due-date")).toHaveText(
+    "Overdue: Jan 15, 2020"
+  );
+  await expect(page.getByTestId("board-stats")).toContainText("1 overdue");
+
+  await page.reload();
+  await expect(page.getByTestId("card-card-7").getByText("High priority")).toBeVisible();
+});
+
+test("filters cards by search and priority", async ({ page }) => {
+  await page.getByLabel("Search cards").fill("analytics");
+  await expect(page.locator('[data-testid^="card-"]')).toHaveCount(1);
+  await expect(page.getByTestId("card-card-3")).toBeVisible();
+
+  await page.getByLabel("Search cards").fill("");
+  await page.getByLabel("Filter by priority").selectOption("high");
+  await expect(page.locator('[data-testid^="card-"]')).toHaveCount(2);
+
+  await page.getByLabel("Filter by priority").selectOption("all");
+  await expect(page.locator('[data-testid^="card-"]')).toHaveCount(8);
+});
+
+test("adds labels and a checklist, ticks items, and filters by label", async ({ page }) => {
+  const card = page.getByTestId("card-card-7");
+  await card.getByRole("button", { name: /edit/i }).click();
+  await card.getByLabel("Labels").fill("launch, marketing");
+  await card.getByLabel("Checklist").fill("Write copy\nShip assets");
+  let saved = waitForSave(page);
+  await card.getByRole("button", { name: /save/i }).click();
+  await saved;
+
+  await expect(card.getByRole("list", { name: "Labels" })).toHaveText(/launch.*marketing/);
+  await expect(card.getByTestId("checklist-progress")).toHaveText("Checklist 0/2");
+
+  saved = waitForSave(page);
+  await card.getByLabel("Write copy").check();
+  await saved;
+  await expect(card.getByTestId("checklist-progress")).toHaveText("Checklist 1/2");
+
+  await page.getByLabel("Filter by label").selectOption("launch");
+  await expect(page.locator('[data-testid^="card-"]')).toHaveCount(1);
+
+  await page.reload();
+  await expect(page.getByTestId("card-card-7").getByLabel("Write copy")).toBeChecked();
+  await expect(page.getByTestId("card-card-7").getByTestId("checklist-progress")).toHaveText(
+    "Checklist 1/2"
+  );
 });

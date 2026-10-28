@@ -1,38 +1,95 @@
 {
   "database": "SQLite",
+  "version": 3,
   "tables": {
     "users": {
       "columns": {
         "id": "INTEGER PRIMARY KEY",
         "username": "TEXT NOT NULL UNIQUE",
+        "password_hash": "TEXT NOT NULL",
         "created_at": "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP"
       }
     },
     "boards": {
       "columns": {
         "id": "INTEGER PRIMARY KEY",
-        "user_id": "INTEGER NOT NULL UNIQUE REFERENCES users(id)",
+        "user_id": "INTEGER NOT NULL REFERENCES users(id)",
+        "name": "TEXT NOT NULL",
         "data": "TEXT NOT NULL",
-        "updated_at": "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP"
+        "created_at": "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP",
+        "updated_at": "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP",
+        "version": "INTEGER NOT NULL DEFAULT 1"
       },
-      "notes": "UNIQUE user_id enforces one board per user for the MVP. data holds the board JSON below."
+      "indexes": [
+        "boards_user_id ON boards (user_id)"
+      ],
+      "notes": "Many boards per user; user_id is the owner. version increases on each save and is the API ETag. data holds the board JSON below."
+    },
+    "board_members": {
+      "columns": {
+        "board_id": "INTEGER NOT NULL REFERENCES boards(id)",
+        "user_id": "INTEGER NOT NULL REFERENCES users(id)",
+        "created_at": "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP"
+      },
+      "primary_key": [
+        "board_id",
+        "user_id"
+      ],
+      "indexes": [
+        "board_members_user_id ON board_members (user_id)"
+      ],
+      "notes": "Users a board is shared with (the owner is not listed)."
+    },
+    "comments": {
+      "columns": {
+        "id": "INTEGER PRIMARY KEY",
+        "board_id": "INTEGER NOT NULL REFERENCES boards(id)",
+        "card_id": "TEXT NOT NULL",
+        "user_id": "INTEGER NOT NULL REFERENCES users(id)",
+        "text": "TEXT NOT NULL",
+        "created_at": "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP"
+      },
+      "indexes": [
+        "comments_board_card ON comments (board_id, card_id)"
+      ],
+      "notes": "card_id refers to a card id inside the board JSON; user_id is the author."
     }
   },
   "board_data": {
     "description": "Same shape as BoardData in frontend/src/lib/kanban.ts",
     "example": {
       "columns": [
-        { "id": "col-backlog", "title": "Backlog", "cardIds": ["card-1"] },
-        { "id": "col-discovery", "title": "Discovery", "cardIds": [] },
-        { "id": "col-progress", "title": "In Progress", "cardIds": [] },
-        { "id": "col-review", "title": "Review", "cardIds": [] },
-        { "id": "col-done", "title": "Done", "cardIds": [] }
+        {
+          "id": "col-backlog",
+          "title": "Backlog",
+          "cardIds": [
+            "card-1"
+          ]
+        },
+        {
+          "id": "col-done",
+          "title": "Done",
+          "cardIds": []
+        }
       ],
       "cards": {
         "card-1": {
           "id": "card-1",
           "title": "Align roadmap themes",
-          "details": "Draft quarterly themes with impact statements and metrics."
+          "details": "Draft quarterly themes with impact statements and metrics.",
+          "priority": "high",
+          "dueDate": "2026-11-20",
+          "labels": [
+            "strategy"
+          ],
+          "checklist": [
+            {
+              "id": "item-1",
+              "text": "Collect team input",
+              "done": true
+            }
+          ],
+          "assignee": "alice"
         }
       }
     }
