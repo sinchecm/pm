@@ -145,7 +145,7 @@ These map to the fixes above; add them together with each fix:
 
 ## Resolution (2026-10-28)
 
-Fixed: H1, H2, H3, M1, M2, M3, M4, M5, plus L1, L3, L4, L9 and the dead `useMemo` from L2. Not yet done: the rest of L2, L5-L8 and L10-L14.
+Fixed: H1, H2, H3, M1, M2, M3, M4, M5, plus L1, L2 (except the default-board duplication), L3, L4, L5, L9 and L12. Not yet done: L6-L8, L10, L11, L13, L14 and the default-board duplication from L2.
 
 - H1/H2: `queueSave` in `KanbanBoard.tsx` catches failures so the queue keeps running. A 401 returns to login with a "session expired" notice; other failures show a notice with Retry.
 - H3/L4: the chat and login requests use `try/catch/finally`, so network errors restore the UI.
@@ -158,6 +158,7 @@ Fixed: H1, H2, H3, M1, M2, M3, M4, M5, plus L1, L3, L4, L9 and the dead `useMemo
 
   The upgrade also required importing `@testing-library/jest-dom/vitest` (jest-dom 7), renaming the config to `vitest.config.mts` with `import.meta.dirname` (Vite 8), and restructuring board loading in `page.tsx` for the stricter `react-hooks/set-state-in-effect` rule.
 - L3: only a 401 counts as signed out; other load failures show an error.
+- Backend refactor: `main.py` now only wires the app. Routes live in `auth.py`, `board.py` and `chat.py`, using a `CurrentUser` dependency type. The unused `/api/me` route was removed (L2), and credentials are compared with `secrets.compare_digest` (L5). `ruff` is a dev dependency with `line-length = 100`; check and format are clean (L12).
 - L9: `start.sh` uses `set -e` and prints the real port; `start.ps1` stops on failure; `test-e2e.sh` gives up after 60 s and prints the logs.
 - Tests added: 3 backend (AI error, refusal and parse failure all return 502), 10 frontend unit (save failure and retry, 401 expiry, AI lock, conversation kept, chat network error, pending state, load error, login network error).
 
@@ -173,14 +174,14 @@ In priority order. Each step should end with all three test suites green (`uv ru
 6. [x] Upgrade frontend dependencies and clear `npm audit` (M5).
 7. [ ] Quick cleanups:
    - [x] remove the unused import and dead `useMemo` (L1, L2)
-   - [ ] remove `/api/me`, or document keeping it (L2)
+   - [x] remove `/api/me` (L2)
    - [ ] de-duplicate the default board (L2)
    - [ ] fix stale npm scripts, README and template SVGs (L10)
-   - [ ] add ruff (L12)
+   - [x] add ruff (L12)
 8. [ ] Small hardening:
    - [x] only treat 401 as signed out (L3)
    - [x] login pending and network-error handling (L4)
-   - [ ] constant-time password comparison (L5)
+   - [x] constant-time password comparison (L5)
    - [ ] input size limits (L6)
    - [ ] `SESSION_SECRET` from `.env` (L7)
    - [ ] non-empty titles (L8)
