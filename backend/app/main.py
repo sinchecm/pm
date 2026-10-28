@@ -13,4 +13,4 @@ def health():
     return {"status": "ok"}
 
 
-app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")
+app.mount("/", StaticFiles(directory=STATIC_DIR, html=True, check_dir=False), name="static")

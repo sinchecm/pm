@@ -38,16 +38,15 @@ Success criteria: one command starts the container locally, the static page and 
 
 ## Part 3: Add in Frontend
 
-- [ ] Configure Next.js for static export; confirm `npm run build` produces `frontend/out`
-- [ ] Add a Node build stage to the Dockerfile; copy `out/` into the Python image and mount it at `/` (replacing the placeholder page)
-- [ ] Add card editing (edit title and details of an existing card) since the business requirements need it and the demo lacks it
-- [ ] Unit tests for card editing; extend existing unit tests where coverage is thin
-- [ ] Point Playwright at the running container (configurable `baseURL`) so e2e tests exercise the real served app
+- [x] Configure Next.js for static export; confirm `npm run build` produces `frontend/out`
+- [x] Add a Node build stage to the Dockerfile; copy `out/` into the Python image and mount it at `/` (replacing the placeholder page)
+- [x] Add card editing (edit title and details of an existing card) since the business requirements need it and the demo lacks it
+- [x] Unit tests for card editing; extend existing unit tests where coverage is thin
+- [x] Point Playwright at the running container (configurable `baseURL`) so e2e tests exercise the real served app
 
 Tests:
 - `npm run lint`, `npm run test:unit` pass
 - `npm run test:e2e` passes against the container at `localhost:8001`
-- Backend test that `/` returns the built index.html
 
 Success criteria: `http://localhost:8001/` shows the Kanban demo served by FastAPI from inside the container; cards can be edited.
 

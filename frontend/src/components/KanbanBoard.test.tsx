@@ -43,4 +43,48 @@ describe("KanbanBoard", () => {
 
     expect(within(column).queryByText("New card")).not.toBeInTheDocument();
   });
+
+  it("edits a card", async () => {
+    render(<KanbanBoard />);
+    const card = screen.getByTestId("card-card-1");
+    await userEvent.click(
+      within(card).getByRole("button", { name: /edit align roadmap themes/i })
+    );
+
+    const titleInput = within(card).getByLabelText("Card title");
+    await userEvent.clear(titleInput);
+    await userEvent.type(titleInput, "Updated title");
+    const detailsInput = within(card).getByLabelText("Card details");
+    await userEvent.clear(detailsInput);
+    await userEvent.type(detailsInput, "Updated details");
+    await userEvent.click(within(card).getByRole("button", { name: /save/i }));
+
+    expect(within(card).getByText("Updated title")).toBeInTheDocument();
+    expect(within(card).getByText("Updated details")).toBeInTheDocument();
+    expect(within(card).queryByLabelText("Card title")).not.toBeInTheDocument();
+  });
+
+  it("cancels editing a card without changes", async () => {
+    render(<KanbanBoard />);
+    const card = screen.getByTestId("card-card-1");
+    await userEvent.click(
+      within(card).getByRole("button", { name: /edit align roadmap themes/i })
+    );
+
+    const titleInput = within(card).getByLabelText("Card title");
+    await userEvent.clear(titleInput);
+    await userEvent.type(titleInput, "Discarded");
+    await userEvent.click(within(card).getByRole("button", { name: /cancel/i }));
+
+    expect(within(card).getByText("Align roadmap themes")).toBeInTheDocument();
+    expect(within(card).queryByText("Discarded")).not.toBeInTheDocument();
+  });
+
+  it("does not add a card without a title", async () => {
+    render(<KanbanBoard />);
+    const column = getFirstColumn();
+    await userEvent.click(within(column).getByRole("button", { name: /add a card/i }));
+    await userEvent.click(within(column).getByRole("button", { name: /add card/i }));
+    expect(within(column).getAllByTestId(/^card-/)).toHaveLength(2);
+  });
 });
