@@ -3,30 +3,38 @@
 import { useEffect, useState } from "react";
 import { KanbanBoard } from "@/components/KanbanBoard";
 import { LoginForm } from "@/components/LoginForm";
+import type { BoardData } from "@/lib/kanban";
+
+const fetchBoard = async (): Promise<BoardData | null> => {
+  const response = await fetch("/api/board");
+  return response.ok ? response.json() : null;
+};
 
 export default function Home() {
   const [checking, setChecking] = useState(true);
-  const [username, setUsername] = useState<string | null>(null);
+  const [board, setBoard] = useState<BoardData | null>(null);
 
   useEffect(() => {
-    fetch("/api/me")
-      .then((response) => (response.ok ? response.json() : null))
-      .then((data) => {
-        setUsername(data?.username ?? null);
-        setChecking(false);
-      });
+    fetchBoard().then((data) => {
+      setBoard(data);
+      setChecking(false);
+    });
   }, []);
+
+  const handleLogin = async () => {
+    setBoard(await fetchBoard());
+  };
 
   const handleLogout = async () => {
     await fetch("/api/logout", { method: "POST" });
-    setUsername(null);
+    setBoard(null);
   };
 
   if (checking) {
     return null;
   }
-  if (!username) {
-    return <LoginForm onLogin={setUsername} />;
+  if (!board) {
+    return <LoginForm onLogin={handleLogin} />;
   }
-  return <KanbanBoard onLogout={handleLogout} />;
+  return <KanbanBoard initialBoard={board} onLogout={handleLogout} />;
 }

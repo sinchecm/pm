@@ -1,8 +1,8 @@
 import { expect, test } from "@playwright/test";
-import { login } from "./helpers";
+import { loginWithFreshBoard } from "./helpers";
 
 test.beforeEach(async ({ page }) => {
-  await login(page);
+  await loginWithFreshBoard(page);
 });
 
 test("loads the kanban board", async ({ page }) => {

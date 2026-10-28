@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -13,14 +13,32 @@ import {
 } from "@dnd-kit/core";
 import { KanbanColumn } from "@/components/KanbanColumn";
 import { KanbanCardPreview } from "@/components/KanbanCardPreview";
-import { createId, initialData, moveCard, type BoardData } from "@/lib/kanban";
+import { createId, moveCard, type BoardData } from "@/lib/kanban";
 
 type KanbanBoardProps = {
+  initialBoard: BoardData;
   onLogout: () => void;
 };
 
-export const KanbanBoard = ({ onLogout }: KanbanBoardProps) => {
-  const [board, setBoard] = useState<BoardData>(() => initialData);
+const saveBoard = async (board: BoardData) => {
+  await fetch("/api/board", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(board),
+  });
+};
+
+export const KanbanBoard = ({ initialBoard, onLogout }: KanbanBoardProps) => {
+  const [board, setBoard] = useState<BoardData>(initialBoard);
+  // Saves run one at a time so the server always ends up with the latest board
+  const saveQueue = useRef(Promise.resolve());
+
+  useEffect(() => {
+    if (board === initialBoard) {
+      return;
+    }
+    saveQueue.current = saveQueue.current.then(() => saveBoard(board));
+  }, [board, initialBoard]);
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
 
   const sensors = useSensors(

@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 
 type LoginFormProps = {
-  onLogin: (username: string) => void;
+  onLogin: () => void;
 };
 
 export const LoginForm = ({ onLogin }: LoginFormProps) => {
@@ -20,8 +20,7 @@ export const LoginForm = ({ onLogin }: LoginFormProps) => {
       setError("Invalid username or password");
       return;
     }
-    const data = await response.json();
-    onLogin(data.username);
+    onLogin();
   };
 
   return (

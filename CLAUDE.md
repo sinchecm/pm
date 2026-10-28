@@ -8,7 +8,7 @@ Project requirements, tech decisions, color scheme and coding standards live in 
 
 ## Current state
 
-- `frontend/` is a Next.js Kanban board behind a login (`/api/login`; board state is still in memory) built as a static export and served by FastAPI at `/` from the Docker image (multi-stage `Dockerfile`).
+- `frontend/` is a Next.js Kanban board behind a login, loaded from and saved to `/api/board`, built as a static export and served by FastAPI at `/` from the Docker image (multi-stage `Dockerfile`).
 - `backend/` is a uv-managed FastAPI app with session auth and a SQLite-backed board API (see `backend/AGENTS.md` and `docs/DATABASE.md`; tests: `cd backend && uv run pytest`). The root `Dockerfile` + `docker-compose.yml` build and run it on port 8001; `scripts/start.sh` / `scripts/stop.sh` (and `.ps1`) wrap compose.
 - `docs/PLAN.md` defines the 10-part build sequence. Read it before starting work and follow the current part; Parts 1 and 5 require explicit user sign-off before proceeding. Keep each directory's AGENTS.md updated as code is added (`frontend/AGENTS.md` is a Part 1 deliverable).
 

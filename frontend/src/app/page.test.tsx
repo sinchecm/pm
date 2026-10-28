@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import Home from "@/app/page";
+import { initialData } from "@/lib/kanban";
 
 const jsonResponse = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status });
@@ -27,22 +28,26 @@ afterEach(() => {
 
 describe("Home", () => {
   it("shows the login form when not signed in", async () => {
-    mockApi({ "/api/me": () => jsonResponse(401, {}) });
+    mockApi({ "/api/board": () => jsonResponse(401, {}) });
     render(<Home />);
     expect(await screen.findByRole("button", { name: /sign in/i })).toBeInTheDocument();
     expect(screen.queryAllByTestId(/column-/)).toHaveLength(0);
   });
 
-  it("shows the board when already signed in", async () => {
-    mockApi({ "/api/me": () => jsonResponse(200, { username: "user" }) });
+  it("loads the board from the API when already signed in", async () => {
+    mockApi({ "/api/board": () => jsonResponse(200, initialData) });
     render(<Home />);
     expect(await screen.findAllByTestId(/column-/)).toHaveLength(5);
   });
 
   it("signs in with valid credentials", async () => {
+    let signedIn = false;
     const fetchMock = mockApi({
-      "/api/me": () => jsonResponse(401, {}),
-      "/api/login": () => jsonResponse(200, { username: "user" }),
+      "/api/board": () => (signedIn ? jsonResponse(200, initialData) : jsonResponse(401, {})),
+      "/api/login": () => {
+        signedIn = true;
+        return jsonResponse(200, { username: "user" });
+      },
     });
     render(<Home />);
     await signIn("user", "password");
@@ -57,7 +62,7 @@ describe("Home", () => {
 
   it("shows an error for invalid credentials", async () => {
     mockApi({
-      "/api/me": () => jsonResponse(401, {}),
+      "/api/board": () => jsonResponse(401, {}),
       "/api/login": () => jsonResponse(401, {}),
     });
     render(<Home />);
@@ -71,7 +76,7 @@ describe("Home", () => {
 
   it("logs out back to the login form", async () => {
     const fetchMock = mockApi({
-      "/api/me": () => jsonResponse(200, { username: "user" }),
+      "/api/board": () => jsonResponse(200, initialData),
       "/api/logout": () => jsonResponse(200, { status: "ok" }),
     });
     render(<Home />);

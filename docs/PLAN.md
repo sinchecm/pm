@@ -88,9 +88,9 @@ Success criteria: backend tests pass; board data survives container restarts.
 
 ## Part 7: Frontend + Backend
 
-- [ ] Frontend loads the board from `GET /api/board` after login (loading state while fetching)
-- [ ] Every change (move, rename, add, edit, delete) updates local state and saves with `PUT /api/board`
-- [ ] Remove `initialData` usage from the runtime path (keep only as a test fixture if useful)
+- [x] Frontend loads the board from `GET /api/board` after login (loading state while fetching)
+- [x] Every change (move, rename, add, edit, delete) updates local state and saves with `PUT /api/board`
+- [x] Remove `initialData` usage from the runtime path (keep only as a test fixture if useful)
 
 Tests:
 - Vitest with mocked fetch: board loads from API; each action triggers a save with the right payload
