@@ -39,6 +39,17 @@ describe("Home", () => {
     expect(screen.queryAllByTestId(/^column-/)).toHaveLength(0);
   });
 
+  it("describes BoardWorkflow on the landing page", async () => {
+    mockApi({ "GET /api/me": () => jsonResponse(401, {}) });
+    render(<Home />);
+    expect(
+      await screen.findByRole("heading", { level: 1, name: /BoardWorkflow/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "About BoardWorkflow" }),
+    ).toBeInTheDocument();
+  });
+
   it("opens the workspace when already signed in", async () => {
     mockApi({
       "GET /api/me": () => jsonResponse(200, user),

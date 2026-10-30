@@ -59,74 +59,72 @@ export const AuthForm = ({ onAuthenticated, notice }: AuthFormProps) => {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-6">
-      <form
-        onSubmit={handleSubmit}
-        className="w-full max-w-sm space-y-5 rounded-[32px] border border-[var(--stroke)] bg-white/80 p-8 shadow-[var(--shadow)]"
-      >
-        <div>
-          <div className="h-2 w-10 rounded-full bg-[var(--accent-yellow)]" />
-          <h1 className="mt-4 font-display text-3xl font-semibold text-[var(--navy-dark)]">
-            Kanban Studio
-          </h1>
-          <p className="mt-2 text-sm text-[var(--gray-text)]">
-            {isRegister
-              ? "Create an account to start planning."
-              : "Sign in to see your boards."}
-          </p>
-        </div>
-        <label className={labelClass}>
-          Username
-          <input
-            value={username}
-            onChange={(event) => setUsername(event.target.value)}
-            autoComplete="username"
-            className={inputClass}
-            required
-          />
-        </label>
-        <label className={labelClass}>
-          Password
-          <input
-            type="password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            autoComplete={isRegister ? "new-password" : "current-password"}
-            className={inputClass}
-            required
-          />
-        </label>
-        {notice && !error && (
-          <p className="text-sm font-medium text-[var(--primary-blue)]">
-            {notice}
-          </p>
-        )}
-        {error && (
-          <p
-            role="alert"
-            className="text-sm font-medium text-[var(--secondary-purple)]"
-          >
-            {error}
-          </p>
-        )}
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="w-full rounded-full bg-[var(--secondary-purple)] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-white transition hover:brightness-110 disabled:opacity-50"
-        >
-          {isRegister ? "Create account" : "Sign in"}
-        </button>
-        <p className="text-center text-sm text-[var(--gray-text)]">
-          {isRegister ? "Already have an account?" : "New here?"}{" "}
-          <button
-            type="button"
-            onClick={switchMode}
-            className="font-semibold text-[var(--primary-blue)] hover:underline"
-          >
-            {isRegister ? "Sign in" : "Create an account"}
-          </button>
+    <form
+      onSubmit={handleSubmit}
+      className="w-full max-w-sm space-y-5 rounded-[32px] border border-[var(--stroke)] bg-white/80 p-8 shadow-[var(--shadow)] lg:w-96"
+    >
+      <div>
+        <div className="h-2 w-10 rounded-full bg-[var(--accent-yellow)]" />
+        <h2 className="mt-4 font-display text-3xl font-semibold text-[var(--navy-dark)]">
+          Kanban Studio
+        </h2>
+        <p className="mt-2 text-sm text-[var(--gray-text)]">
+          {isRegister
+            ? "Create an account to start planning."
+            : "Sign in to see your boards."}
         </p>
-      </form>
-    </main>
+      </div>
+      <label className={labelClass}>
+        Username
+        <input
+          value={username}
+          onChange={(event) => setUsername(event.target.value)}
+          autoComplete="username"
+          className={inputClass}
+          required
+        />
+      </label>
+      <label className={labelClass}>
+        Password
+        <input
+          type="password"
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+          autoComplete={isRegister ? "new-password" : "current-password"}
+          className={inputClass}
+          required
+        />
+      </label>
+      {notice && !error && (
+        <p className="text-sm font-medium text-[var(--primary-blue)]">
+          {notice}
+        </p>
+      )}
+      {error && (
+        <p
+          role="alert"
+          className="text-sm font-medium text-[var(--secondary-purple)]"
+        >
+          {error}
+        </p>
+      )}
+      <button
+        type="submit"
+        disabled={isSubmitting}
+        className="w-full rounded-full bg-[var(--secondary-purple)] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-white transition hover:brightness-110 disabled:opacity-50"
+      >
+        {isRegister ? "Create account" : "Sign in"}
+      </button>
+      <p className="text-center text-sm text-[var(--gray-text)]">
+        {isRegister ? "Already have an account?" : "New here?"}{" "}
+        <button
+          type="button"
+          onClick={switchMode}
+          className="font-semibold text-[var(--primary-blue)] hover:underline"
+        >
+          {isRegister ? "Sign in" : "Create an account"}
+        </button>
+      </p>
+    </form>
   );
 };

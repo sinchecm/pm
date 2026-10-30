@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { AuthForm } from "@/components/AuthForm";
+import { Landing } from "@/components/Landing";
 import { Workspace } from "@/components/Workspace";
 import { isUnauthorized, request } from "@/lib/api";
 import type { User } from "@/lib/kanban";
@@ -55,7 +55,7 @@ export default function Home() {
     );
   }
   if (!user) {
-    return <AuthForm onAuthenticated={handleAuthenticated} notice={notice} />;
+    return <Landing onAuthenticated={handleAuthenticated} notice={notice} />;
   }
   return (
     <Workspace
